@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // === Data & Configuration ===
     const QUESTION_TYPES = [
@@ -60,13 +59,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveApiBtn) {
             saveApiBtn.addEventListener('click', () => {
                 const key = apiKeyInput.value.trim();
-                if (key.startsWith('sk-')) {
+                // Allow OpenAI (sk-) or Google Gemini (AIza) keys
+                if (key.startsWith('sk-') || key.startsWith('AIza')) {
                     apiKey = key;
                     localStorage.setItem('openai_api_key', key);
-                    alert('API Key가 저장되었습니다.');
+                    alert('API Key가 저장되었습니다. (OpenAI / Gemini 호환)');
                     apiModal.classList.add('hidden');
                 } else {
-                    alert('올바른 OpenAI API Key를 입력해주세요 (sk-로 시작).');
+                    alert('올바른 API Key를 입력해주세요.\n(OpenAI: sk-... 또는 Google Gemini: AIza...)');
                 }
             });
         }
@@ -74,15 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupTabs() {
         mainTabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.dataset.target;
+            btn.onclick = (e) => {
+                e.preventDefault();
+                const targetId = btn.getAttribute('data-target');
+                if (!targetId) return;
+
+                // Toggle Active State
                 mainTabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+
+                // Show Target Section
                 sections.forEach(sec => {
                     if (sec.id === targetId) sec.classList.add('active');
                     else sec.classList.remove('active');
                 });
-            });
+            };
         });
     }
 
@@ -115,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="passage-header">
                     <span class="passage-number">${index + 1}</span>
                     <input type="text" class="input-title" placeholder="지문 제목 (예: 2024 수능 31번)" value="${escapeHtml(psg.title)}" oninput="updatePassage(${index}, 'title', this.value)">
-                    <button class="btn-remove-passage" onclick="removePassage(${index})" title="삭제">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <button type="button" class="btn-remove-passage" onclick="window.removePassage(${index})" title="삭제">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
                 <textarea class="input-content" placeholder="영어 지문 본문을 여기에 입력하세요..." oninput="updatePassage(${index}, 'content', this.value)">${escapeHtml(psg.content)}</textarea>
@@ -125,9 +131,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Assign to window explicitely
     window.updatePassage = (index, field, value) => { if (passages[index]) passages[index][field] = value; };
-    window.removePassage = (index) => { if (confirm('이 지문을 삭제하시겠습니까?')) { passages.splice(index, 1); renderPassagesList(); } };
-    if (addPassageBtn) addPassageBtn.addEventListener('click', () => { passages.push({ title: '', content: '' }); renderPassagesList(); setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100); });
+    window.removePassage = (index) => {
+        passages.splice(index, 1);
+        renderPassagesList();
+    };
+    window.addNewPassage = function () {
+        console.log("Global addNewPassage Triggered");
+        passages.push({ title: '', content: '' });
+        renderPassagesList();
+        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
+    };
+
+    if (addPassageBtn) {
+        addPassageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.addNewPassage();
+        });
+    } else {
+        console.warn("Add Passage Button Element not found in DOM");
+    }
     function escapeHtml(text) { if (!text) return ''; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 
     // === File Upload ===
@@ -164,15 +189,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === Generator Start ===
-    generateBtn.addEventListener('click', async () => {
-        const validPassages = passages.filter(p => p.content.trim().length > 0);
-        if (validPassages.length === 0) { alert('먼저 [지문 관리] 탭에서 내용을 입력해주세요.'); mainTabBtns[0].click(); return; }
+    // === Global Generation Function (Robust) ===
+    window.generateQuestions = async function () {
+        console.log("Global generateQuestions triggered");
+        const generateBtn = document.getElementById('generate-btn');
 
-        generateBtn.disabled = true;
-        generateBtn.innerHTML = '생성 중...';
+        const validPassages = passages.filter(p => p.content.trim().length > 0);
+        if (validPassages.length === 0) {
+            alert('먼저 [지문 관리] 탭에서 내용을 입력해주세요.');
+            // Fallback to simpler switchTab if available, or just alert
+            const tab1 = document.querySelector('[data-target="passage-section"]');
+            if (tab1) tab1.click();
+            return;
+        }
+
+        if (generateBtn) {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '생성 중...';
+        }
         resultView.innerHTML = '<div style="padding:2rem; text-align:center; color:#64748b;">AI가 문제를 분석하고 변형 문제를 생성 중입니다...</div>';
 
         try {
+            console.log("Starting generation loop for", validPassages.length, "passages");
             let htmlOutput = '';
             let globalAnswerKey = [];
             let globalQIndex = 1;
@@ -203,9 +241,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             resultView.innerHTML = htmlOutput;
-        } catch (error) { console.error(error); resultView.innerHTML = `<p class="error">오류: ${error.message}</p>`; }
-        finally { generateBtn.disabled = false; generateBtn.innerHTML = '문제 생성'; }
-    });
+            console.log("Generation complete");
+        } catch (error) {
+            console.error("Generation Error:", error);
+            resultView.innerHTML = `<p class="error">오류: ${error.message}</p>`;
+        } finally {
+            if (generateBtn) {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '문제 생성';
+            }
+        }
+    };
+
+    // Remove old listener block
+    if (generateBtn) {
+        // Listener removed in favor of inline onclick
+    }
 
     // === Router (API vs Mock) ===
     async function generateQuestionLogic(text, typeObj) {
@@ -398,7 +449,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let question = "다음 글을 읽고 물음에 답하시오.";
         let choices = ["Choice 1", "Choice 2", "Choice 3", "Choice 4", "Choice 5"];
         let answer = "③";
-        let explanation = "이 문제는 글의 전체적인 흐름과 핵심 내용을 파악하여 정답을 도출해야 합니다."; // Default clean mock explanation
+        // Initialize with default message in case specific logic misses it
+        let explanation = "이 문제는 글의 전체적인 흐름과 핵심 내용을 파악하여 정답을 도출해야 합니다. (기본 해설)";
         let boxContent = null;
         let boxPosition = 'top';
 
@@ -431,18 +483,46 @@ document.addEventListener('DOMContentLoaded', () => {
         let processedText = cleanText;
         const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
 
+        // Helper to find keywords for explanations & generation using NLP
+        const getKeywords = (txt) => {
+            if (window.nlp) {
+                // Use compromise library if available
+                const doc = window.nlp(txt);
+                // Get most frequent nouns (excluding pronouns/dates) that are main topics
+                let topics = doc.nouns().out('frequency');
+                // Filter out single-letter words or common noise
+                topics = topics.filter(t => t.normal.length > 2 && t.count > 1);
+                return topics.slice(0, 3).map(t => t.normal); // Return top 3
+            } else {
+                // Fallback (Legacy)
+                const stopwords = ['the', 'and', 'to', 'of', 'in', 'a', 'is', 'that', 'for', 'it', 'on', 'with', 'as', 'are', 'this', 'was', 'be', 'by', 'but', 'not', 'have', 'from', 'they', 'at', 'an', 'or', 'which', 'will', 'more'];
+                const w = txt.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+                const freq = {};
+                w.forEach(word => { if (!stopwords.includes(word)) freq[word] = (freq[word] || 0) + 1; });
+                return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 2).map(p => p[0]);
+            }
+        };
+        const keywords = getKeywords(cleanText);
+        const mainTopic = keywords.length > 0 ? keywords[0] : '주요 소재';
+
         switch (typeId) {
             case 'purpose':
                 question = "다음 글의 목적으로 가장 적절한 것은?";
                 choices = ["신제품 설명회 일정을 변경하려고", "새로 출시된 소프트웨어 사용법을 안내하려고", "프로젝트 참여를 독려하고 감사를 표하려고", "변경된 보안 규정 준수를 요청하려고", "고객 만족도 조사 결과를 보고하려고"];
+                answer = "③";
+                explanation = `정답은 ③번입니다. <br>글의 초반부에서 ${mainTopic}에 대한 이야기를 시작하며, 중반 이후 구체적인 목적이 드러납니다. 따라서 프로젝트 참여에 대한 독려와 감사를 전하는 것이 글의 주된 목적입니다.`;
                 break;
             case 'mood':
                 question = "다음 글에 드러난 I의 심경 변화로 가장 적절한 것은?";
                 choices = ["worried → relieved", "excited → disappointed", "bored → amazed", "scared → calm", "hopeful → frustrated"];
+                answer = "①";
+                explanation = `정답은 ①번입니다. <br>초반에는 ${mainTopic}와 관련된 상황으로 인해 긴장하고 걱정하는 모습이 보이지만, 후반부에서 문제가 해결되거나 상황이 반전되면서 안도하는 심경으로 변화하고 있습니다.`;
                 break;
             case 'claim':
                 question = "다음 글에서 필자가 주장하는 바로 가장 적절한 것은?";
                 choices = ["지속 가능한 발전을 위해 친환경 에너지를 사용해야 한다.", "창의적인 아이디어는 자유로운 토론에서 나온다.", "성공적인 협상은 상호 신뢰에서 비롯된다.", "개인의 프라이버시 보호를 위한 법적 제도가 필요하다.", "디지털 리터러시 교육을 강화해야 한다."];
+                answer = "③";
+                explanation = `정답은 ③번입니다. <br>필자는 ${mainTopic}의 중요성을 반복적으로 강조하고 있습니다. 따라서 이를 바탕으로 상호 신뢰가 성공적인 협상의 기반이 된다는 주장이 글의 요지와 가장 잘 부합합니다.`;
                 break;
             case 'implication':
                 question = "밑줄 친 부분이 글에서 의미하는 바로 가장 적절한 것은?";
@@ -459,18 +539,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     processedText = cleanText.replace(targetSent, `<u>${targetSent}</u>`);
                 }
                 choices = ["what is truly meaningful in life", "what success destroys on its path", "what is happening in our daily lives", "what our enemy truly thinks about us", "what is not already in the mind to see"];
+                answer = "⑤";
+                explanation = `정답은 ⑤번입니다. <br>밑줄 친 부분은 비유적인 표현으로, ${mainTopic}의 본질을 꿰뚫어봐야 한다는 의미를 담고 있습니다. 문맥상 '보이지 않는 것을 마음으로 본다'는 의미가 가장 적절합니다.`;
                 break;
             case 'gist':
                 question = "다음 글의 요지로 가장 적절한 것은?";
                 choices = ["무리한 운동은 오히려 건강을 해칠 수 있다.", "규칙적인 수면 습관이 기억력 향상에 도움이 된다.", "다양한 문화 체험은 창의적 사고를 촉진한다.", "실패를 두려워하지 않는 태도가 성공의 열쇠이다.", "효과적인 의사소통을 위해서는 경청하는 자세가 중요하다."];
+                answer = "⑤";
+                explanation = `정답은 ⑤번입니다. <br>${mainTopic}에 대한 글쓴이의 견해를 종합해볼 때, 단순한 전달보다는 상대방의 말을 경청하는 것이 소통의 핵심이라는 점을 강조하고 있습니다.`;
                 break;
             case 'topic':
                 question = "다음 글의 주제로 가장 적절한 것은?";
                 choices = ["the necessity of protecting endangered species", "positive effects of classical music on studying", "difficulties in adapting to a new environment", "strategies for effective time management", "correlation between diet and physical health"];
+                answer = "④";
+                explanation = `정답은 ④번입니다. <br>글 전반에 걸쳐 ${mainTopic}와 시간을 효율적으로 사용하는 방법에 대해 논의하고 있습니다. 따라서 '효과적인 시간 관리 전략'이 글의 주제로 가장 적절합니다.`;
                 break;
             case 'title':
                 question = "다음 글의 제목으로 가장 적절한 것은?";
                 choices = ["Why Do We Need Sleep?", "How to Overcome Stage Fright", "The Unexpected Benefits of Boredom", "Artificial Intelligence: Friend or Foe?", "Small Habits Change Your Life"];
+                answer = "⑤";
+                explanation = `정답은 ⑤번입니다. <br>${mainTopic}가 우리 삶에 미치는 긍정적인 영향을 다루고 있습니다. 작은 습관의 변화가 큰 결과를 가져온다는 내용이므로 'Small Habits Change Your Life'가 제목으로 적절합니다.`;
                 break;
 
             case 'grammar':
@@ -551,18 +639,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 selected.forEach((c, i) => {
                     let s = newSentences[c.sIdx];
                     let displayWord = c.text;
+                    if (answer === "③") answer = ""; // Reset default
 
                     if (i === answerIndex) {
                         let distor = distorters[c.text];
-
-                        // Strict Safe Distortion logic
-                        // Avoid random string addition like 'to ' -> 'ing' which creates non-existent words (e.g. to make -> makeing)
-
-                        if (!distor && c.type === 'to_infinitive') {
-                            // Safer: Just remove 'to' to make it a bare infinitive error (always valid english words, just wrong grammar)
-                            distor = c.text.replace('to ', '');
-                        }
-
+                        if (!distor && c.type === 'to_infinitive') distor = c.text.replace('to ', '');
                         if (!distor && c.text.endsWith('ing')) distor = c.text.replace('ing', 'ed');
                         else if (!distor && c.text.endsWith('ed')) distor = c.text.replace('ed', 'ing');
 
@@ -573,7 +654,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         displayWord = distor;
                         answer = `①②③④⑤`.charAt(i);
-                        explanation = `정답은 ${answer}번입니다. 문맥과 어법 구조상 '(${displayWord})'은 적절하지 않습니다. 올바른 표현은 '${c.text}'이어야 합니다. [출제 의도: ${c.label}]`;
+                        // Dynamic Explanation for Grammar
+                        explanation = `정답은 ${answer}번입니다. <br>문맥과 어법 구조를 볼 때, '<strong>${displayWord}</strong>'는 적절하지 않습니다. <br>해당 위치는 [${c.label}]에 해당하므로, 올바른 표현인 '<strong>${c.text}</strong>' 형태가 와야 합니다.`;
                     }
                     const marker = `①②③④⑤`.charAt(i);
                     s = s.replace(c.text, `${marker} <u>${displayWord}</u>`);
@@ -630,6 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 vSelected.forEach((c, i) => {
                     let s = vNewSentences[c.sIdx];
                     let displayWord = c.word;
+                    if (answer === "③") answer = ""; // Reset default
                     if (i === vAnswerIndex) {
                         let distor = null;
                         const lowerClean = c.clean.toLowerCase();
@@ -645,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         displayWord = distor;
                         answer = `①②③④⑤`.charAt(i);
-                        explanation = `정답은 ${answer}번입니다. 문맥상 '(${displayWord})'은 적절하지 않습니다. 지문의 흐름을 고려할 때, 반대 의미를 가진 '${c.word}'(또는 유사어)가 와야 자연스럽습니다.`;
+                        explanation = `정답은 ${answer}번입니다. <br>흐름상 '<strong>${displayWord}</strong>'은 문맥과 어울리지 않습니다. 원래 단어인 '<strong>${c.word}</strong>'(또는 그와 유사한 의미)가 쓰여야, 글의 논리적 흐름이 자연스럽습니다.`;
                     }
                     const marker = `①②③④⑤`.charAt(i);
                     s = s.replace(c.word, `${marker} <u>${displayWord}</u>`);
@@ -658,35 +741,95 @@ document.addEventListener('DOMContentLoaded', () => {
                 question = "다음 빈칸에 들어갈 말로 가장 적절한 것은?";
                 processedText = cleanText.replace(/the/i, "______");
                 choices = ["automation", "competition", "specialization", "diversification", "standardization"];
+                answer = "③";
+                explanation = "정답은 ③번 'specialization'입니다. 글의 흐름상 특정 분야에 집중한다는 맥락이 가장 적절하기 때문입니다.";
                 break;
+
             case 'blank_phrase':
                 question = "다음 빈칸에 들어갈 말로 가장 적절한 것은?";
-                // Improved Mock: Try to find "the + adj + noun" pattern
-                const npRegex = /\b(the\s+[a-z]+\s+[a-z]{4,})\b/i;
-                const match = cleanText.match(npRegex);
-                if (match) {
-                    processedText = cleanText.replace(match[0], "__________________");
-                    choices = ["the rapid development", "an unexpected result", "the cultural heritage", "social interaction", "economic growth"];
-                } else {
-                    processedText = cleanText.replace(/process/i, "__________");
-                    choices = ["the rapid development", "an unexpected result", "the cultural heritage", "social interaction", "economic growth"];
+                let targetPhrase = "";
+
+                if (window.nlp) {
+                    const doc = window.nlp(cleanText);
+                    const phrases = doc.clauses().match('#Noun+').out('array');
+                    const validPhrases = phrases.filter(p => p.split(' ').length >= 2 && p.split(' ').length < 8);
+                    targetPhrase = validPhrases.length > 0 ? validPhrases[Math.floor(Math.random() * validPhrases.length)] : (phrases[0] || "key value");
                 }
+                if (!targetPhrase) targetPhrase = "the core value";
+
+                // Robust Replacement Logic
+                if (cleanText.indexOf(targetPhrase) !== -1) {
+                    // Only replace the first occurrence
+                    processedText = cleanText.replace(targetPhrase, "______________________");
+
+                    choices = [
+                        targetPhrase,
+                        "a completely different approach",
+                        "the opposite result",
+                        "unrelated factors",
+                        "temporary solution"
+                    ];
+                    const ansIdx = Math.floor(Math.random() * 5);
+                    [choices[0], choices[ansIdx]] = [choices[ansIdx], choices[0]];
+                    answer = "①②③④⑤".charAt(ansIdx);
+                } else {
+                    // Fallback
+                    processedText = cleanText + " (Matching Error)";
+                    choices = [targetPhrase, "B", "C", "D", "E"];
+                    answer = "①";
+                }
+                explanation = `정답은 ${answer}번입니다. <br>빈칸은 글의 흐름상 '<strong>${targetPhrase}</strong>' 부분이 들어가야 적절합니다.`;
                 break;
+
             case 'blank_verb_clause':
                 question = "다음 빈칸에 들어갈 말로 가장 적절한 것은?";
-                processedText = cleanText.replace(/make/i, "_________________");
-                choices = ["leads to success", "causes the problem", "improves the quality", "requires more time", "changes the perspective"];
+                let targetVerb = "leads to";
+                if (window.nlp) {
+                    const doc = window.nlp(cleanText);
+                    const verbs = doc.verbs().out('array');
+                    const longVerbs = verbs.filter(v => v.split(' ').length >= 2);
+                    targetVerb = longVerbs.length > 0 ? longVerbs[Math.floor(Math.random() * longVerbs.length)] : (verbs[0] || "leads to");
+                }
+
+                if (cleanText.includes(targetVerb)) {
+                    processedText = cleanText.replace(targetVerb, "______________________");
+                    choices = [targetVerb, "causes the opposite", "halts the process", "ignores the result", "modifies the plan"];
+                    const ansIdx = Math.floor(Math.random() * 5);
+                    [choices[0], choices[ansIdx]] = [choices[ansIdx], choices[0]];
+                    answer = "①②③④⑤".charAt(ansIdx);
+                } else {
+                    processedText = cleanText;
+                    choices = [targetVerb, "B", "C", "D", "E"];
+                    answer = "①";
+                }
+                explanation = `정답은 ${answer}번입니다. <br>문맥상 동사구 '<strong>${targetVerb}</strong>'가 가장 자연스럽습니다.`;
                 break;
+
             case 'blank_sentence':
                 question = "다음 빈칸에 들어갈 말로 가장 적절한 것은?";
-                processedText = cleanText.replace(/that/i, "_________________________________");
-                choices = [
-                    "what is truly meaningful in life is often invisible to the eye",
-                    "what success destroys on its path is the very foundation of it",
-                    "what is happening in our daily lives reflects our inner state",
-                    "what our enemy truly thinks about us defines our strategy",
-                    "what is not already in the mind cannot be seen by the eyes"
-                ];
+                // Pick a random sentence from the middle
+                const midIdx = Math.floor(sentences.length / 2);
+                const targetSentBlank = sentences[midIdx] || sentences[0];
+
+                if (targetSentBlank) {
+                    processedText = cleanText.replace(targetSentBlank, "______________________________________________________");
+                    choices = [
+                        targetSentBlank.trim(),
+                        "However, the opposite is true in this case.",
+                        "Therefore, we need to consider other factors.",
+                        "This is why the result was unexpected.",
+                        "In addition, the cost was higher than expected."
+                    ];
+                    const ansIdx = Math.floor(Math.random() * 5);
+                    [choices[0], choices[ansIdx]] = [choices[ansIdx], choices[0]];
+                    answer = "①②③④⑤".charAt(ansIdx);
+                    explanation = `정답은 ${answer}번입니다. <br>글의 전체 흐름을 볼 때, 문맥을 자연스럽게 이어주는 해당 문장이 들어가야 합니다.`;
+                } else {
+                    processedText = cleanText;
+                    choices = ["A", "B", "C", "D", "E"];
+                    answer = "①";
+                    explanation = "생성 오류";
+                }
                 break;
 
             case 'irrelevant':
@@ -707,21 +850,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 processedText = iSentences.join(' ');
                 answer = "④";
+                explanation = "정답은 ④번입니다. <br>글의 전체적인 흐름은 특정 주제를 일관되게 다루고 있으나, ④번 문장은 소재는 유사하나 논점이 벗어나 있어 글의 통일성을 해치고 있습니다.";
                 break;
 
             case 'order':
                 question = "주어진 글 다음에 이어질 글의 순서로 가장 적절한 것은?";
-                const totalLen = cleanText.length;
-                const partLen = Math.floor(totalLen / 3.5);
-                boxContent = cleanText.substring(0, partLen) + "...";
-                let rest = cleanText.substring(partLen);
-                const chunks = rest.match(/[^.!?]+[.!?]+/g) || [rest];
-                let chunkStep = Math.ceil(chunks.length / 3);
-                let partA = chunks.slice(0, chunkStep).join(' ');
-                let partB = chunks.slice(chunkStep, chunkStep * 2).join(' ');
-                let partC = chunks.slice(chunkStep * 2).join(' ');
-                processedText = [partA || "(A) ...", partB || "(B) ...", partC || "(C) ..."];
+
+                // Split logic: Try to split by sentence groups first
+                let orderSentences = cleanText.match(/[^.!?]+[.!?]+/g) || [];
+
+                // If text is too short or sentences not parsed well, fall back to simple word splitting
+                if (orderSentences.length < 3) {
+                    const words = cleanText.split(' ');
+                    const third = Math.floor(words.length / 3);
+                    orderSentences = [
+                        words.slice(0, third).join(' '),
+                        words.slice(third, third * 2).join(' '),
+                        words.slice(third * 2).join(' ')
+                    ];
+                }
+
+                // Determine the box content (first 25-30% of text or first sentence)
+                let splitPoint = Math.floor(orderSentences.length / 4) + 1;
+                // Ensure at least 1 sentence in box, and at least 3 sentences remain for A,B,C
+                if (orderSentences.length < 4) splitPoint = 1;
+
+                // If we split by sentences
+                const boxPart = orderSentences.slice(0, splitPoint).join(' ');
+                const remainingParts = orderSentences.slice(splitPoint);
+
+                // We need 3 chunks for A, B, C
+                // Evenly divide remaining sentences into 3
+                const partSize = Math.ceil(remainingParts.length / 3);
+                const chunkA = remainingParts.slice(0, partSize).join(' ') || "(A) Section Content...";
+                const chunkB = remainingParts.slice(partSize, partSize * 2).join(' ') || "(B) Section Content...";
+                const chunkC = remainingParts.slice(partSize * 2).join(' ') || "(C) Section Content...";
+
+                boxContent = boxPart;
+                // Assign to passage for rendering. app.js handles array as (A)(B)(C) rendering
+                processedText = [chunkA, chunkB, chunkC];
+
                 choices = ["(A)-(C)-(B)", "(B)-(A)-(C)", "(B)-(C)-(A)", "(C)-(A)-(B)", "(C)-(B)-(A)"];
+                answer = "③";
+                explanation = "정답은 ③번입니다. <br>주어진 글의 논리적 흐름에 따라 (B)에서 문제가 제기되고, (C)에서 예시나 부연 설명이 이어지며, (A)에서 결론을 맺는 구조가 자연스럽습니다.";
                 break;
 
             case 'insertion':
@@ -758,6 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 processedText = insText;
                 choices = [];
                 answer = "③";
+                explanation = "정답은 ③번입니다. <br>주어진 문장은 연결어(예: However, Therefore 등)나 지시어를 포함하고 있어 앞뒤 문맥의 전환점이 됩니다. ③번 위치 앞 내용과 박스 안의 내용이 논리적으로 긴밀하게 연결되기 때문입니다.";
                 break;
 
             case 'summary':
@@ -780,6 +952,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     { A: "method", B: "result" },
                     { A: "problem", B: "solution" }
                 ];
+                answer = "①";
+                explanation = "정답은 ①번입니다. <br>글 전체는 (A) '관점(perspective)'의 차이가 최종적인 (B) '결과(outcome)'에 미치는 영향을 설명하고 있으므로, 이를 요약한 문장이 가장 적절합니다.";
                 break;
         }
 
@@ -799,18 +973,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let passageHtml = '';
-        if (typeId === 'purpose') {
-            passageHtml = `
-            <div class="browser-window">
-                <div class="browser-header">
-                    <div class="window-control"><svg width="8" height="2" viewBox="0 0 8 2"><rect width="8" height="2" fill="white"/></svg></div>
-                    <div class="window-control"><svg width="8" height="8" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" stroke="white" stroke-width="2" fill="none"/></svg></div>
-                    <div class="window-control"><svg width="8" height="8" viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9" stroke="white" stroke-width="2"/><line x1="9" y1="1" x2="1" y2="9" stroke="white" stroke-width="2"/></svg></div>
-                </div>
-                <div class="browser-toolbar"><div class="toolbar-icon" style="margin-right:auto">...</div></div>
-                <div class="browser-content" style="${justifyStyle}">${typeof passage === 'string' ? passage.replace(/\n/g, '<br>') : ''}</div>
-            </div>`;
-        } else if (typeId === 'order' && Array.isArray(passage)) {
+        if (typeId === 'order' && Array.isArray(passage)) {
             passageHtml = `<div class="order-section">
                 <div class="order-block"><div class="order-label">(A)</div><div style="${justifyStyle}">${passage[0]}</div></div>
                 <div class="order-block"><div class="order-label">(B)</div><div style="${justifyStyle}">${passage[1]}</div></div>
@@ -820,7 +983,9 @@ document.addEventListener('DOMContentLoaded', () => {
             passageHtml = `<div class="passage-box" style="padding: 0 0.5rem 1.5rem 0.5rem; line-height: 1.8; font-size: 1.05rem; background: #fff; font-family: serif; color: #000; ${justifyStyle}">${typeof passage === 'string' ? passage.replace(/\n/g, '<br>') : ''}</div>`;
         }
 
-        let arrowHtml = (typeId === 'summary') ? `<div class="summary-arrow"><svg class="arrow-down-icon" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></div>` : '';
+        let arrowHtml = (typeId === 'summary')
+            ? `<div class="summary-arrow" style="text-align:center; margin:1rem 0;"><svg width="24" height="24" viewBox="0 0 24 24" fill="black"><path d="M7 10l5 5 5-5z" transform="scale(2) translate(-6, -6)"/></svg></div>` // Scaled up arrow
+            : '';
 
         let choiceListHtml = '';
         if (typeId === 'summary' && Array.isArray(choices)) {
@@ -866,193 +1031,136 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${arrowHtml}
                 ${boxPosition === 'bottom' ? boxHtml : ''}
                 ${choiceListHtml}
-                ${showAnswerInline ? `<div style="margin-top:2rem; background:#f8fafc; padding:1.2rem; border-radius:8px; border:1px solid #e2e8f0;"><div style="font-weight:700; color:#475569; margin-bottom:0.5rem;">[정답 및 해설]</div><div style="margin-bottom:0.5rem;"><strong>정답:</strong> ${answer}</div><div style="color:#64748b; font-size:0.95rem; line-height:1.6;"><strong>[해설]</strong> ${explanation}</div></div>` : ''}
+                ${showAnswerInline ? `<div class="answer-box" style="margin-top:2rem; background:#f0f9ff; padding:1.5rem; border-radius:8px; border:1px solid #bae6fd;"><div class="answer-label" style="font-weight:700; color:#0369a1; margin-bottom:0.8rem; font-size:1.1rem;">[정답 및 해설]</div><div class="answer-line" style="margin-bottom:0.8rem; font-size:1.05rem;"><strong>정답:</strong> ${answer}</div><div class="explanation-line" style="color:#334155; font-size:1rem; line-height:1.6;"><strong>해설:</strong> ${explanation}</div></div>` : ''}
             </div>`;
     }
 
     if (apiSettingBtn) apiSettingBtn.addEventListener('click', () => apiModal.classList.remove('hidden'));
     if (cancelApiBtn) cancelApiBtn.addEventListener('click', () => apiModal.classList.add('hidden'));
     if (copyBtn) copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(resultView.innerText).then(() => alert('복사되었습니다.')); });
-    if (downloadBtn) downloadBtn.addEventListener('click', () => { window.print(); });
+    // PDF Download Removed
 
-    if (downloadHtmlBtn) {
-        downloadHtmlBtn.addEventListener('click', async () => {
-            const content = resultView.innerHTML;
-            if (!content || content.includes('placeholder-state') || content.trim().length === 0) {
-                alert('생성된 문제가 없습니다. 먼저 문제를 생성해주세요.');
-                return;
-            }
+    // === Global Download Function (Robust) ===
+    // === Global Download Function (Robust & Sanitized) ===
+    window.downloadHtml = function () {
+        console.log("Global downloadHtml triggered");
+        const downloadBtn = document.getElementById('download-html-btn');
 
-            // Handle CSS Embedding Robustly
-            let cssText = '';
+        // 1. Sanitize Content (Remove Extension Injections)
+        const rawContent = resultView.cloneNode(true);
+        // Remove scripts, iframes, and hidden extension elements
+        rawContent.querySelectorAll('script, iframe, style, [class*="extension"], [id*="extension"]').forEach(el => el.remove());
+        const content = rawContent.innerHTML;
 
-            // Try 1: Fetch (Works on Server)
+        if (!content || content.includes('placeholder-state') || content.trim().length === 0) {
+            alert('생성된 문제가 없습니다. 먼저 문제를 생성해주세요.');
+            return;
+        }
+
+        // Save state
+        const originalText = downloadBtn ? downloadBtn.innerHTML : '';
+        if (downloadBtn) {
+            downloadBtn.innerHTML = '...';
+            downloadBtn.disabled = true;
+        }
+
+        setTimeout(() => {
             try {
-                const response = await fetch('style.css');
-                if (response.ok) {
-                    cssText = await response.text();
-                }
-            } catch (e) {
-                console.warn('Fetch failed (likely file:// protocol), trying fallback...');
-            }
+                const EXPORT_CSS = `:root { --primary: #4f46e5; --text-main: #1e293b; } 
+                * { box-sizing: border-box; } 
+                body { font-family: 'Pretendard', sans-serif; background: white; color: #1e293b; padding: 0.5cm; counter-reset: page; } 
+                .all-in-one-container { column-count: 2; column-gap: 1cm; width: 100%; }
+                .question-card { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; display: inline-block; width: 100%; margin-bottom: 2rem; padding-bottom: 1rem; }
+                .passage-box { padding: 0.5rem; line-height: 1.7; font-size: 1.05rem; text-align: justify; border: 1px solid #e2e8f0; margin-bottom: 1rem; border-radius: 4px; } 
+                .rounded-box { border: 1px solid #9ca3af; border-radius: 8px; padding: 1rem; margin: 1rem 0; text-align: justify; } 
+                .choice-item { margin-bottom: 0.4rem; display: flex; } .choice-num { margin-right: 8px; font-weight: 600; } 
+                .exam-header-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 1rem; text-align: center; } 
+                .exam-header-table td { border: 1px solid #000; padding: 8px; } .header-title { font-size: 1.5rem; font-weight: 800; }
+                .all-answers-section { break-before: page; margin-top: 2rem; }
+                .answer-box { break-inside: avoid; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; }
+                @media print { body { padding: 0; } .all-in-one-container { column-count: 2; } @page { margin-bottom: 20mm; } }
+                .summary-table-container { margin-top: 1rem; } .summary-row { display: flex; font-size: 0.95rem; } .summary-col { flex: 1; text-align: center; }`;
 
-            // Try 2: Document StyleSheet (Works if rules are accessible)
-            if (!cssText) {
-                try {
-                    for (const sheet of document.styleSheets) {
-                        try {
-                            if (sheet.href && sheet.href.includes('style.css')) {
-                                for (const rule of sheet.cssRules) {
-                                    cssText += rule.cssText + '\n';
-                                }
-                            }
-                        } catch (e) {
-                            // Accessing cssRules on cross-origin/file-protocol sheets can block
-                        }
-                    }
-                } catch (e) { console.warn('StyleSheet access failed', e); }
-            }
-
-            // Fallback Warning
-            // Fallback Warning
-            if (!cssText) {
-                // Use minimal default styles
-                cssText = `
-                    body { font-family: 'Pretendard', sans-serif; line-height: 1.6; }
-                    .quiz-container { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 2rem; }
-                    .passage-box { background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; }
-                    .choices { list-style: none; padding: 0; }
-                    .choice-item { margin-bottom: 0.5rem; }
-                    .choice-num { font-weight: bold; margin-right: 0.5rem; }
-                    @media print { .btn-ghost { display: none; } }
-                `;
-                console.warn('Local file restrictions prevented loading of external CSS. Using fallback styles.');
-            }
-
-            const fullHtml = `<!DOCTYPE html>
+                const fullHtml = `<!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSAT 변형문제 Export</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        ${cssText}
-        /* Style Overrides for Exported HTML */
-        body { background-color: white !important; height: auto !important; overflow: visible !important; padding: 20px 40px; }
-        .result-content { 
-            border: none !important; 
-            box-shadow: none !important; 
-            max-height: none !important; 
-            overflow: visible !important; 
-            padding: 0 !important;
-            max-width: 100% !important; /* Allow full width for 2-column layout */
-            margin: 0 auto;
-        }
-        .quiz-container { break-inside: avoid; page-break-inside: avoid; }
-        
-        /* Exam Header Table Style */
-        .exam-header-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 2px solid #000;
-            margin-bottom: 30px;
-            font-family: 'Pretendard', sans-serif;
-            text-align: center;
-        }
-        .exam-header-table td {
-            padding: 8px 5px;
-            border: 1px solid #000;
-        }
-        .header-title {
-            font-size: 1.8rem;
-            font-weight: 800;
-            padding: 15px !important;
-        }
-        .header-info {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-        .header-notice {
-            font-size: 0.8rem;
-            color: #333;
-        }
-        /* Editable highlight */
-        [contenteditable]:hover {
-            background-color: #f0f9ff;
-            cursor: text;
-        }
-        
-        /* CRITICAL: Force 2-column layout for screen AND print */
-        .all-in-one-container {
-            column-count: 2;
-            column-gap: 40px;
-            column-rule: 1px solid #e2e8f0;
-            width: 100%;
-            display: block;
-        }
-        
-        .passage-divider {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            margin-bottom: 2rem;
-            -webkit-column-break-inside: avoid;
-        }
-
-        .question-card {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            -webkit-column-break-inside: avoid;
-            margin-bottom: 2rem;
-            display: inline-block;
-            width: 100%;
-        }
-
-        @media screen and (max-width: 900px) {
-            .all-in-one-container { column-count: 1; }
-        }
-
-        @media print {
-            body { padding: 0; }
-            .all-in-one-container { column-count: 2; column-gap: 1cm; }
-            .exam-header-table { margin-top: 0; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSAT 변형문제 Export</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>${EXPORT_CSS} [contenteditable]:hover { outline: 1px dashed #ccc; }</style>
 </head>
 <body>
-    <!-- Editable Exam Header -->
-    <table class="exam-header-table">
-        <tr>
-            <td colspan="3" class="header-title" contenteditable="true">2025학년도 1학년 2학기 (공통영어2) (중간)고사</td>
-        </tr>
-        <tr class="header-info">
-            <td style="width: 33%; text-align: center;" contenteditable="true">2025. 9. 29. 월요일 3교시</td>
-            <td style="width: 34%; text-align: center;" contenteditable="true">[ 과목 코드: 03 ]</td>
-            <td style="width: 33%; text-align: center;" contenteditable="true">부산중앙여자고등학교</td>
-        </tr>
-        <tr>
-            <td colspan="3" class="header-notice" contenteditable="true">이 시험 문제의 저작권은 부산광역시교육청(부산중앙여고)에 있습니다. 저작권법에 의해 보호받는 저작물이므로 전재와 복제와 발췌를 금지하며, 이를 어길 시 처벌될 수 있습니다.</td>
-        </tr>
-    </table>
-
-    <div class="result-content">
-        ${content}
-    </div>
+<table class="exam-header-table">
+    <tr><td colspan="3" class="header-title" contenteditable="true">2025학년도 1학년 2학기 (공통영어2) (중간)고사</td></tr>
+    <tr class="header-info">
+        <td style="width: 33%; text-align: center;" contenteditable="true">2025. 9. 29. 월요일 3교시</td>
+        <td style="width: 34%; text-align: center;" contenteditable="true">[ 과목 코드: 03 ]</td>
+        <td style="width: 33%; text-align: center;" contenteditable="true">부산중앙여자고등학교</td>
+    </tr>
+    <tr><td colspan="3" class="header-notice" contenteditable="true">이 시험 문제의 저작권은 부산광역시교육청(부산중앙여고)에 있습니다. 저작권법에 의해 보호받는 저작물이므로 전재와 복제와 발췌를 금지하며, 이를 어길 시 처벌될 수 있습니다.</td></tr>
+</table>
+<div class="result-content" contenteditable="true" spellcheck="false">${content}</div>
 </body>
 </html>`;
 
-            // Add BOM for UTF-8 compatibility
-            const blob = new Blob(['\uFEFF' + fullHtml], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `CSAT_Problems_${new Date().toISOString().slice(0, 10)}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
+                const filename = `CSAT_Problems_${new Date().toISOString().slice(0, 10)}.html`;
+
+                try {
+                    // Strategy 1: Blob (Best for Web)
+                    console.log("Attempting Strategy 1: Blob");
+                    const blob = new Blob(['\uFEFF' + fullHtml], { type: 'application/octet-stream' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 2000);
+                } catch (blobErr) {
+                    console.warn("Blob failed, trying Data URI...", blobErr);
+                    // Strategy 2: Data URI (Localhost Fallback)
+                    const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent('\uFEFF' + fullHtml);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = dataUri;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => document.body.removeChild(a), 2000);
+                }
+
+                if (downloadBtn) {
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                }
+
+            } catch (e) {
+                console.error("Critical Download Error:", e);
+                // Strategy 3: New Window (Last Resort)
+                alert("다운로드가 차단되었습니다. 새 창에 내용을 표시합니다. [Ctrl+S]를 눌러 저장하세요.");
+                const newWin = window.open("", "_blank");
+                if (newWin) {
+                    newWin.document.write(fullHtml);
+                    newWin.document.close();
+                }
+
+                if (downloadBtn) {
+                    downloadBtn.innerHTML = originalText ? originalText : 'HTML 저장';
+                    downloadBtn.disabled = false;
+                }
+            }
+        }, 50);
+    };
+
+    // Remove old listener block
+    if (downloadHtmlBtn) {
+        // Listener removed in favor of inline onclick
     }
+
+
 
     init();
 });
+
