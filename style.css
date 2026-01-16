@@ -511,25 +511,89 @@ textarea.source-textarea:focus {
   background-color: #f9f9f9;
 }
 
+/* Question Card Default Styles (Screen) */
+.question-card {
+  background: white;
+  border: 1px solid #ddd;
+  /* Subtle border for screen */
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: 'Batang', 'Times New Roman', serif;
+  /* Exam Font */
+}
+
+/* Exam Layout for Screen (Preview) */
+.exam-layout {
+  display: block;
+  /* Default block */
+  width: 100%;
+}
+
+/* PRINT & PREVIEW MODE - The 'Real' Exam Look */
+@media print,
+screen and (min-width: 1000px) {
+  /* Apply to large screen preview & print */
+
+  /* 2-Column Layout Container */
+  .exam-layout {
+    column-count: 2;
+    column-gap: 40px;
+    column-rule: 1px solid #000;
+    /* Vertical Divider */
+    widows: 2;
+    orphans: 2;
+    text-align: justify;
+  }
+
+  /* Question Card in 2-Column Mode */
+  .question-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    display: inline-block;
+    /* Crucial for column breaking */
+    width: 100%;
+    margin-bottom: 20px;
+
+    /* Clean look for print/exam mode */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0 5px;
+    /* Slight padding from divider */
+  }
+
+  /* Header Spanning */
+  .exam-header-container {
+    column-span: all;
+    /* Spans across both columns */
+    margin-bottom: 40px;
+  }
+}
+
 @media print {
   @page {
     size: A4;
-    margin: 20mm;
+    margin: 15mm 15mm 20mm 15mm;
+    /* Top, Right, Bottom, Left */
 
-    /* Standard way to show page number at bottom center */
     @bottom-center {
       content: "- " counter(page) " -";
       font-size: 11px;
-      font-family: 'Times New Roman', serif;
+      font-family: 'Batang', serif;
     }
   }
 
   body {
-    margin-bottom: 20mm;
+    margin: 0;
+    padding: 0;
     background-color: white;
+    color: black;
+    -webkit-print-color-adjust: exact;
   }
 
-  /* Hide non-printable elements */
+  /* Hide UI Elements */
   header,
   .main-nav,
   .settings-btn,
@@ -541,11 +605,24 @@ textarea.source-textarea:focus {
   .file-upload-box,
   hr,
   #loading,
-  #empty-msg {
+  #empty-msg,
+  .sub-actions,
+  .alert {
     display: none !important;
   }
 
-  /* Fixed Footer for Repeat Info (Optional but Requested) */
+  #results-container {
+    margin: 0;
+    padding: 0;
+  }
+
+  main {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+  }
+
   .exam-footer {
     position: fixed;
     bottom: 0;
@@ -555,37 +632,14 @@ textarea.source-textarea:focus {
     font-size: 10px;
     background-color: white;
     padding: 5px 0;
-    border-top: 1px solid #eee;
+    border-top: 1px solid #aaa;
     display: block !important;
-    /* Ensure it's shown in print */
-  }
-
-  /* Layout Adjustments */
-  .exam-layout {
-    display: block;
-    column-count: 2;
-    column-gap: 40px;
-    width: 100%;
-  }
-
-  .question-card {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    margin-bottom: 20px;
-    border: none;
-    box-shadow: none;
-    padding: 0;
   }
 
   .answer-section {
     page-break-before: always;
     margin-top: 0;
-  }
-
-  main {
-    padding: 0;
-    margin: 0;
-    width: 100%;
-    max-width: none;
+    column-count: 2;
+    /* Answers also in 2 columns if preferred, or 1 */
   }
 }

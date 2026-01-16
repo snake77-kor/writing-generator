@@ -306,40 +306,42 @@ function renderCardResult(index, originalText, questions, globalType) {
     let answerSection = document.getElementById('answer-section');
 
     if (!examLayout) {
-        // Create wrappers
-        examLayout = document.createElement('div');
-        examLayout.id = 'exam-layout';
-        examLayout.className = 'exam-layout';
-
-        // Add Exam Header (Editable) - ONLY ONCE
-        const headerHtml = `
-            <div class="exam-header-container" contenteditable="true">
-                <div class="header-box">
-                    <h1 class="exam-title">2025학년도 1학년 2학기 (공통영어2) (기말)고사</h1>
-                    <div class="exam-info-row">
-                        <span class="info-left">2025. 12. 10. 수요일 3교시</span>
-                        <span class="info-center">[ 과목 코드 : 03 ]</span>
-                        <span class="info-right">부산중앙여자고등학교</span>
-                    </div>
-                </div>
-                <div class="copyright-notice">
-                    이 시험 문제의 저작권은 부산광역시교육청(부산중앙여고)에 있습니다. 저작권법에 의해 보호받는 저작물이므로 전재와 복제와 발췌를 금지하며, 이를 어길 시 처벌될 수 있습니다.
+        // 1. Add Exam Header (Editable) - Inserted BEFORE the layout
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'exam-header-container';
+        headerDiv.contentEditable = "true";
+        headerDiv.innerHTML = `
+            <div class="header-box">
+                <h1 class="exam-title">2025학년도 1학년 2학기 (공통영어2) (기말)고사</h1>
+                <div class="exam-info-row">
+                    <span class="info-left">2025. 12. 10. 수요일 3교시</span>
+                    <span class="info-center">[ 과목 코드 : 03 ]</span>
+                    <span class="info-right">부산중앙여자고등학교</span>
                 </div>
             </div>
+            <div class="copyright-notice">
+                이 시험 문제의 저작권은 부산광역시교육청(부산중앙여고)에 있습니다. 저작권법에 의해 보호받는 저작물이므로 전재와 복제와 발췌를 금지하며, 이를 어길 시 처벌될 수 있습니다.
+            </div>
         `;
-        examLayout.innerHTML = headerHtml;
+        container.appendChild(headerDiv);
 
+        // 2. Create Two-Column Layout Wrapper (Questions Body)
+        examLayout = document.createElement('div');
+        examLayout.id = 'exam-layout';
+        examLayout.className = 'exam-layout'; // Defined as 2-column in CSS
+        container.appendChild(examLayout);
+
+        // 3. Divider
         const divider = document.createElement('hr');
         divider.className = 'print-divider';
         divider.style.cssText = "margin: 50px 0; border: 0; border-top: 2px dashed #ccc; display:block;";
+        container.appendChild(divider);
 
+        // 4. Answer Section
         answerSection = document.createElement('div');
         answerSection.id = 'answer-section';
         answerSection.className = 'answer-section';
         answerSection.innerHTML = "<h2 style='margin-bottom:20px; text-align:center;'>[ 정답 및 해설 ]</h2>";
-
-        container.appendChild(examLayout);
-        container.appendChild(divider);
         container.appendChild(answerSection);
 
         // Add Invisible Footer for Print
