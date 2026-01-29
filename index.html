@@ -18,98 +18,127 @@
 
     <header>
         <div class="logo"><i class="fas fa-brain"></i> CSAT Gen <span class="badge">BETA</span></div>
-        <div class="main-nav">
-            <div id="nav-input" class="nav-item active" onclick="switchTab('input')">1. 지문 관리</div>
-            <div id="nav-generate" class="nav-item" onclick="switchTab('generate')">2. 문제 생성</div>
-        </div>
-        <button class="settings-btn" onclick="resetKey()"><i class="fas fa-cog"></i> 설정</button>
+        <div style="flex:1;"></div>
     </header>
 
-    <main>
-        <!-- Tab 1: 지문 관리 -->
-        <div id="tab-input" class="tab-content active">
-            <div class="manage-container">
+    <div class="app-container" style="display:flex; height:calc(100vh - 64px);">
+        <!-- Sidebar -->
+        <div class="sidebar"
+            style="width:260px; border-right:1px solid #eee; padding:20px; background:#fff; flex-shrink:0; display:flex; flex-direction:column;">
 
-                <!-- Hidden File Input -->
-                <input type="file" id="file-input" accept=".txt,.pdf" multiple style="display:none"
-                    onchange="handleFileUpload(this)">
-
-                <!-- File Upload Box (Top) -->
-                <div class="file-upload-box" onclick="document.getElementById('file-input').click()">
-                    <i class="fas fa-folder-open file-icon"></i>
-                    <div class="file-title">파일로 지문 추가하기</div>
-                    <div class="file-desc">PDF 또는 TXT 파일을 선택하면 자동으로 지문이 추가됩니다.</div>
-                </div>
-
-                <!-- Input List (Middle - New items will be added here) -->
-                <div id="input-list">
-                    <!-- Cards will be added here -->
-                </div>
-
-                <!-- Add Button (Bottom) -->
-                <button class="add-btn" onclick="addInputBox()">
-                    <i class="fas fa-plus"></i> 지문 추가하기
-                </button>
-
-            </div>
-        </div>
-
-        <!-- Tab 2: 문제 생성 -->
-        <div id="tab-generate" class="tab-content">
-            <div class="type-nav">
-                <div class="type-pill active" onclick="selectType(this)"><i class="fas fa-star"
-                        style="font-size:11px;"></i> 통합형</div>
-                <div class="type-pill" onclick="selectType(this)">글의 목적</div>
-                <div class="type-pill" onclick="selectType(this)">심경 변화</div>
-                <div class="type-pill" onclick="selectType(this)">글의 주장</div>
-                <div class="type-pill" onclick="selectType(this)">함축 의미</div>
-                <div class="type-pill" onclick="selectType(this)">글의 요지</div>
-                <div class="type-pill" onclick="selectType(this)">글의 주제</div>
-                <div class="type-pill" onclick="selectType(this)">글의 제목</div>
-                <div class="type-pill" onclick="selectType(this)">어법</div>
-                <div class="type-pill" onclick="selectType(this)">어휘</div>
-                <div class="type-pill" onclick="selectType(this)">빈칸 추론</div>
-                <div class="type-pill" onclick="selectType(this)">무관한 문장</div>
-                <div class="type-pill" onclick="selectType(this)">글의 순서</div>
-                <div class="type-pill" onclick="selectType(this)">문장 넣기</div>
-                <div class="type-pill" onclick="selectType(this)">요약문</div>
-            </div>
-
-            <div class="control-header">
-                <div class="page-title">
-                    <h2>통합형</h2>
-                    <p>입력된 <span id="text-count-badge" style="font-weight:bold; color:#4f46e5;">1</span>개의 지문을 바탕으로 문제가
-                        생성됩니다.</p>
-
-                </div>
-
-                <div class="action-group">
-                    <button id="runBtn" class="ai-btn" onclick="runAI()">
-                        <i class="fas fa-magic"></i> AI 문제 생성
+            <div style="flex:1; overflow-y:auto;">
+                <div class="sidebar-group" style="margin-bottom:25px;">
+                    <button class="sidebar-item active" data-type="all" onclick="selectType(this)"
+                        style="width:100%; text-align:left; padding:12px 15px; border:none; background:#f5f7fa; border-radius:8px; cursor:pointer; font-weight:700; color:#4f46e5; margin-bottom:5px; font-size:14px; transition:0.2s;">
+                        ⚡ 전체 변형문제 생성
                     </button>
-                    <div class="sub-actions">
-                        <button class="icon-btn" title="HTML로 저장" onclick="saveAsHTML()"><i
-                                class="fas fa-save"></i></button>
-                    </div>
+                </div>
+
+                <div class="sidebar-group" style="margin-bottom:25px;">
+                    <div class="group-title"
+                        style="font-size:12px; font-weight:700; color:#9fa6b2; margin-bottom:10px; padding-left:5px;">
+                        Part 1. 대의 파악</div>
+                    <button class="sidebar-item" data-type="purpose" onclick="selectType(this)">1. 글의 목적</button>
+                    <button class="sidebar-item" data-type="mood" onclick="selectType(this)">2. 심경 변화</button>
+                    <button class="sidebar-item" data-type="claim" onclick="selectType(this)">3. 글의 주장</button>
+                    <button class="sidebar-item" data-type="underlying" onclick="selectType(this)">4. 함축 의미</button>
+                    <button class="sidebar-item" data-type="gist" onclick="selectType(this)">5. 글의 요지</button>
+                    <button class="sidebar-item" data-type="topic" onclick="selectType(this)">6. 글의 주제</button>
+                    <button class="sidebar-item" data-type="title" onclick="selectType(this)">7. 글의 제목</button>
+                </div>
+
+                <div class="sidebar-group" style="margin-bottom:25px;">
+                    <div class="group-title"
+                        style="font-size:12px; font-weight:700; color:#9fa6b2; margin-bottom:10px; padding-left:5px;">
+                        Part 2. 어법/어휘</div>
+                    <button class="sidebar-item" data-type="grammar" onclick="selectType(this)">8. 어법</button>
+                    <button class="sidebar-item" data-type="vocabulary" onclick="selectType(this)">9. 어휘</button>
+                </div>
+
+                <div class="sidebar-group" style="margin-bottom:25px;">
+                    <div class="group-title"
+                        style="font-size:12px; font-weight:700; color:#9fa6b2; margin-bottom:10px; padding-left:5px;">
+                        Part 3. 논리/빈칸</div>
+                    <button class="sidebar-item" data-type="blank" onclick="selectType(this)">10. 빈칸 추론</button>
+                    <button class="sidebar-item" data-type="irrelevant" onclick="selectType(this)">11. 무관한 문장</button>
+                    <button class="sidebar-item" data-type="sequence" onclick="selectType(this)">12. 글의 순서</button>
+                    <button class="sidebar-item" data-type="insertion" onclick="selectType(this)">13. 문장 넣기</button>
+                    <button class="sidebar-item" data-type="summary" onclick="selectType(this)">14. 요약문</button>
                 </div>
             </div>
 
-            <hr style="border:0; border-top:1px solid #eee; margin-bottom:30px;">
-
-            <div id="loading" class="loader">
-                <i class="fas fa-spinner fa-spin fa-2x" style="margin-bottom:15px;"></i>
-                <div id="statusText" style="font-weight:600;">AI 모델 탐색 중...</div>
+            <!-- API Key Section (Bottom) -->
+            <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
+                <div class="group-title"
+                    style="font-size:12px; font-weight:700; color:#9fa6b2; margin-bottom:10px; padding-left:5px;">설정
+                </div>
+                <button class="sidebar-item" onclick="resetKey()">
+                    <i class="fas fa-key" style="margin-right:8px; color:#aaa;"></i> API Key 관리
+                    <span id="api-key-status"
+                        style="font-size:11px; color:#22c55e; font-weight:700; margin-left:auto;"></span>
+                </button>
             </div>
-
-            <div id="empty-msg" style="text-align:center; padding:100px 0; color:#a0a3bd;">
-                <i class="fas fa-inbox" style="font-size:48px; margin-bottom:20px; opacity:0.5;"></i><br>
-                1. [지문 관리] 탭에서 지문을 입력하세요.<br>
-                2. [AI 문제 생성] 버튼을 누르세요.
-            </div>
-
-            <div id="results-container"></div>
         </div>
-    </main>
+
+        <!-- Main Content (Input + Results) -->
+        <div class="main-content" style="flex:1; padding:40px; overflow-y:auto; background-color: var(--bg-main);">
+
+            <!-- SECTION 1: Passages Input -->
+            <div id="section-input" style="margin-bottom: 50px;">
+                <h3 style="font-size:18px; font-weight:700; color:#14142b; margin-bottom:20px;">1. 지문 입력 <span
+                        id="text-count-badge"
+                        style="background:#e0e7ff; color:#4f46e5; padding:2px 8px; border-radius:10px; font-size:12px; vertical-align:middle;">0개</span>
+                </h3>
+
+                <div class="manage-container" style="max-width:100%;">
+                    <!-- File Upload Box -->
+                    <div class="file-upload-box" onclick="document.getElementById('file-input').click()"
+                        style="padding:20px; border:2px dashed #ddd; box-shadow:none; background:transparent;">
+                        <input type="file" id="file-input" accept=".txt,.pdf" multiple style="display:none"
+                            onchange="handleFileUpload(this)">
+                        <div style="display:flex; align-items:center; gap:10px; color:#666;">
+                            <i class="fas fa-cloud-upload-alt" style="font-size:20px;"></i>
+                            <span style="font-weight:600;">파일 업로드 (PDF/TXT)</span>
+                            <span style="font-size:12px; color:#999;">또는 아래에 직접 입력</span>
+                        </div>
+                    </div>
+
+                    <!-- Input List -->
+                    <div id="input-list" style="margin-top:20px;"></div>
+
+                    <!-- Add Button -->
+                    <button class="add-btn" onclick="addInputBox()" style="margin-top:20px;">
+                        <i class="fas fa-plus"></i> 새 지문박스 추가
+                    </button>
+                </div>
+            </div>
+
+            <hr style="border:0; border-top:1px solid #ddd; margin: 40px 0;">
+
+            <!-- SECTION 2: Results -->
+            <div id="section-results">
+                <div class="control-header"
+                    style="padding:0; background:transparent; border:none; margin-bottom:20px; align-items:center;">
+                    <button class="icon-btn" title="HTML로 저장" onclick="saveAsHTML()" style="margin-left:auto;"><i
+                            class="fas fa-save"></i> 저장</button>
+                </div>
+
+                <div id="loading" class="loader">
+                    <i class="fas fa-spinner fa-spin fa-2x" style="margin-bottom:15px;"></i>
+                    <div id="statusText" style="font-weight:600;">AI 문제 생성 중...</div>
+                </div>
+
+                <div id="results-container"></div>
+
+                <div id="empty-results-msg" style="text-align:center; padding:60px 0; color:#a0a3bd;">
+                    <i class="fas fa-arrow-left" style="font-size:24px; margin-bottom:15px; opacity:0.5;"></i><br>
+                    왼쪽 사이드바에서 <b>문제 유형을 클릭</b>하면<br>
+                    여기에 바로 문제가 생성됩니다.
+                </div>
+            </div>
+
+        </div>
+    </div>
 
     <script src="app.js" defer></script>
 </body>

@@ -1,107 +1,91 @@
 let globalGeneratedData = []; // Global storage for download
 
 // Prompts Configuration with Concise Explanations & High-Quality Distractors
+const ALL_TYPES = [
+    'purpose', 'mood', 'claim', 'underlying', 'gist',
+    'topic', 'title', 'grammar', 'vocabulary', 'blank',
+    'irrelevant', 'sequence', 'insertion', 'summary'
+];
+
 const PROMPTS = {
-    '통합형': `You are a Korea CSAT Exam Creator (수능 출제위원). Create a COMPLETE SET of 14 High-Difficulty multiple-choice questions based on the text.
-Types: Purpose, Mood, Claim, Implication, Gist, Topic, Title, Grammar, Vocabulary, Blank, Irrelevant, Order, Insertion, Summary.
-
-REQUIREMENTS:
-1. **High Difficulty & Logic**:
-   - **Main Idea**: Distractors must be 'Too Broad', 'Too Narrow', or 'Contradictory'.
-   - **Grammar/Vocabulary**: Focus on Key Syntax & Contextual Coherence.
-   - **Implication**: Metaphorical Meaning vs Literal Trap.
-   - **Blank**: Paraphrased Answers. (Generate 1 representative question).
-   - **Irrelevant/Insertion**: "The Last-5 Rule". Circle Numbers ①-⑤.
-   - **Order**: "3-Step Cutting" (Introduction Box + Logical Split).
-   - **Summary**: "Paraphrasing Strategy" (Abstract Synonyms).
-2. **Concise Explanation**: Simple reasoning for the correct answer.
-3. **Format**: JSON Array of 14 objects.
-
-Format per object:
-{
-  "type": "Type Name",
-  "question": "Question Stem (Korean)",
-  "options": ["(1)...", "(2)...", "(3)...", "(4)...", "(5)..."],
-  "answer_index": 3,
-  "explanation": "...",
-  "modified_text": "(Optional)...",
-  "box": "(Optional)...",
-  "A": "...", "B": "...", "C": "...",
-  "summary_text": "..."
-}
+    'purpose': `Role: CSAT Creator. Create ONE "Purpose" question.
+Requirements:
+1. Identify the practical purpose of the text (e.g., letter, announcement, complaint, suggestion).
+2. Options: Korean phrases (e.g. "~하려고").
+3. Distractors: Plausible but incorrect purposes based on keywords.
+Format: [{"type":"글의 목적", "question":"다음 글의 목적으로 가장 적절한 것은?", "options":["(1)...", "(2)...", "(3)...", "(4)...", "(5)..."], "answer_index":1, "explanation":"..."}]
 Text: {text}`,
 
-    '글의 목적': `Role: CSAT Creator. Create ONE "Purpose" question.
-Requirements: High difficulty, concise explanation.
-Format: [{"type":"글의 목적", "question":"...", "options":[...], "answer_index":1, "explanation":"..."}]
+    'mood': `Role: CSAT Creator. Create ONE "Mood/Atmosphere" question.
+Requirements:
+1. If Storytelling: Options must be "(A) Emotion -> (B) Emotion" format (English words).
+2. If Non-fiction: Options must represent the "Tone" of the author (English words).
+3. Distractors: Opposing emotions or unrelated moods.
+Format: [{"type":"심경 변화", "question":"다음 글에 드러난 I의 심경 변화로 가장 적절한 것은? (또는 글의 분위기)", "options":["(1) worried -> relieved", "(2)...", ...], "answer_index":1, "explanation":"..."}]
 Text: {text}`,
 
-    '심경 변화': `Role: CSAT Creator. Create ONE "Mood" question.
-Requirements: High difficulty, concise explanation.
-Format: [{"type":"심경 변화", "question":"...", "options":[...], "answer_index":1, "explanation":"..."}]
+    'claim': `Role: CSAT Creator. Create ONE "Claim" question (필자의 주장).
+Requirements:
+1. Identify the Main Argument/Opinion.
+2. Options: KOREAN complete sentences.
+3. Distractors: Too specific (detail focus), Topic Error (mentioned but not main point), Contradictory.
+Format: [{"type":"글의 주장", "question":"다음 글에서 필자가 주장하는 바로 가장 적절한 것은?", "options":["(1)...", "(2)...", ...], "answer_index":1, "explanation":"..."}]
 Text: {text}`,
 
-    '글의 주장': `Role: CSAT Creator. Create ONE "Claim" question.
-Requirements: High difficulty, concise explanation.
-Distractor Logic: Use 'Too Broad', 'Too Narrow', 'Contradictory' options.
-Format: [{"type":"글의 주장", "question":"...", "options":[...], "answer_index":1, "explanation":"..."}]
-Text: {text}`,
-
-    '함축 의미': `Role: CSAT Creator. Create ONE "Implication" (Underlying Meaning) question.
+    'underlying': `Role: CSAT Creator. Create ONE "Implication" (Underlying Meaning) question.
 Process:
 1. **Target Selection**: Identify a metaphor representing the Main Idea. Mark it with <u>tags</u> in "modified_text".
-2. **Correct Answer**: Paraphrase the figurative meaning abstractly.
-3. **Distractors**: Include Literal Trap (literal interpretation) and Topic Error.
+2. **Correct Answer**: Paraphrase the figurative meaning abstractly (English).
+3. **Distractors**: Literal Interpretation (Trap), Topic Error.
 Format: [{"type":"함축 의미", "question":"밑줄 친 부분이 다음 글에서 의미하는 바로 가장 적절한 것은?", "options":["Option1", "Option2", "Option3", "Option4", "Option5"], "answer_index":3, "explanation":"...", "modified_text":"Full text with <u>underlined phrase</u>..."}]
 Text: {text}`,
 
-    '글의 요지': `Role: CSAT Creator. Create ONE "Gist" question.
-Requirements: High difficulty, concise explanation.
-Distractor Logic: Ensure distractors are Too Broad, Too Narrow, or Contradictory.
-Format: [{"type":"글의 요지", "question":"...", "options":[...], "answer_index":1, "explanation":"..."}]
+    'gist': `Role: CSAT Creator. Create ONE "Gist" question (글의 요지).
+Requirements:
+1. Identify the Core Message.
+2. Options: KOREAN full sentences.
+3. Distractors: Mentioned details but not the main point, Misinterpretation of causality.
+Format: [{"type":"글의 요지", "question":"다음 글의 요지로 가장 적절한 것은?", "options":["(1)...", "(2)...", ...], "answer_index":1, "explanation":"..."}]
 Text: {text}`,
 
-    '글의 주제': `Role: CSAT Creator. Create ONE "Topic" question.
-Requirements: High difficulty, concise explanation.
-Distractor Logic: Ensure distractors are Too Broad, Too Narrow, or Contradictory.
-Format: [{"type":"글의 주제", "question":"...", "options":[...], "answer_index":1, "explanation":"..."}]
+    'topic': `Role: CSAT Creator. Create ONE "Topic" question (글의 주제).
+Requirements:
+1. Identify the Topic/Subject.
+2. Options: ENGLISH phrases.
+3. Distractors: Too Broad, Too Narrow, Same Keyword but wrong relation.
+Format: [{"type":"글의 주제", "question":"다음 글의 주제로 가장 적절한 것은?", "options":["(1)...", "(2)...", ...], "answer_index":1, "explanation":"..."}]
 Text: {text}`,
 
-    '글의 제목': `Role: CSAT Creator. Create ONE "Title" question.
-Requirements: High difficulty, concise explanation.
-Distractor Logic: Ensure distractors are Too Broad, Too Narrow, or Contradictory.
-Format: [{"type":"글의 제목", "question":"...", "options":[...], "answer_index":1, "explanation":"..."}]
+    'title': `Role: CSAT Creator. Create ONE "Title" question (글의 제목).
+Requirements:
+1. Create a Title that covers the whole text.
+2. Options: ENGLISH phrases/sentences.
+3. Distractors: Too Broad (covers too much), Too Narrow (only one part), Metaphoric but inaccurate.
+Format: [{"type":"글의 제목", "question":"다음 글의 제목으로 가장 적절한 것은?", "options":["(1)...", "(2)...", ...], "answer_index":1, "explanation":"..."}]
 Text: {text}`,
 
-    '어법': `Role: CSAT Creator. Create ONE "Grammar" question.
+    'grammar': `Role: CSAT Creator. Create ONE "Grammar" question.
 Requirements:
 1. **Focus on Key Grammar**: Subject-Verb Agreement, Voice, Participles, Relative Clauses.
-2. **Distribution**: Spread 5 options evenly (approx. 1 per sentence).
+2. **Distribution**: Spread 5 options evenly.
 3. **Underlining**: ONE option must be incorrect.
-Format: [{"type":"어법", "question":"다음 글의 밑줄 친 부분 중, 어법상 틀린 것은?", "options":["Option1", "Option2", "Option3", "Option4", "Option5"], "answer_index":3, "explanation":"...", "modified_text":"Full text with (1) <u>word</u> markings..."}] 
+Format: [{"type":"어법", "question":"다음 글의 밑줄 친 부분 중, 어법상 틀린 것은?", "options":["(1)", "(2)", "(3)", "(4)", "(5)"], "answer_index":3, "explanation":"...", "modified_text":"Full text with (1) <u>word</u> markings..."}] 
 Text: {text}`,
 
-    '어휘': `Role: CSAT Creator. Create ONE "Vocabulary" question.
+    'vocabulary': `Role: CSAT Creator. Create ONE "Vocabulary" question.
 Requirements: **HIGH DIFFICULTY LOGIC**.
-1. **Global Coherence**: The target word must be a KEYWORD for the Main Idea. The WRONG choice (answer) must **contradict** the main flow or author's stance.
-2. **Intra-sentence Logic**: Prioritize sentences with Connectives (Although, However, Therefore, Thus, Because).
-   - Use the logical relationship (Contrast/Causality) of the clause to determine the validity of the word.
+1. **Global Coherence**: The target word must be a KEYWORD for the Main Idea. The WRONG choice (answer) must **contradict** the main flow.
+2. **Intra-sentence Logic**: Prioritize sentences with Connectives (However, Therefore).
 3. **Distribution**: Select 5 words evenly distributed.
 4. **Underlining**: Return "modified_text" with 5 numbered underlines around the target words (e.g. "(1) <u>word</u>").
-5. **Logic-Based Explanation**: State the logical clue in the explanation.
-Format: [{"type":"어휘", "question":"다음 글의 밑줄 친 부분 중, 문맥상 낱말의 쓰임이 적절하지 않은 것은?", "options":["Option1", "Option2", "Option3", "Option4", "Option5"], "answer_index":3, "explanation":"...", "modified_text":"Full text with (1) <u>word</u> markings..."}]
+Format: [{"type":"어휘", "question":"다음 글의 밑줄 친 부분 중, 문맥상 낱말의 쓰임이 적절하지 않은 것은?", "options":["(1)", "(2)", "(3)", "(4)", "(5)"], "answer_index":3, "explanation":"...", "modified_text":"Full text with (1) <u>word</u> markings..."}]
 Text: {text}`,
 
-    '빈칸 추론': `Role: CSAT Creator. Create A SET OF 4 "Blank Inference" questions based on the text.
-REQUIREMENTS:
-1. **Quantity**: You MUST generate exactly **4 distinct questions** in a JSON Array.
-2. **Variety**:
-   - Question 1: Target a **Key Word** (Core concept).
-   - Question 2: Target a **Phrase** (Meaningful chunk).
-   - Question 3: Target a **Clause** (Subject + Verb structure).
-   - Question 4: Target a **Transition** (However, Therefore) or **Conclusion** at the end.
-3. **Paraphrasing**: The Correct Option MUST be a **PARAPHRASED** version of the original text, NOT the exact words.
-4. **Format**: Return a JSON ARRAY of 4 objects.
+    'blank': `Role: CSAT Creator. Create A SET OF 4 "Blank Inference" questions based on the text.
+Requirements:
+1. **Quantity**: Exactly **4 distinct questions**.
+2. **Variety**: Word, Phrase, Clause, Transition/Conclusion.
+3. **Paraphrasing**: The Correct Option MUST be a **PARAPHRASED** version of the original text.
 Format: [
   {"type":"빈칸 추론 (단어)", "target":"(Original Word)", "question":"다음 빈칸에 들어갈 말로 가장 적절한 것을 고르시오.", "options":["Paraphrased Answer", "Distractor..."], "answer_index":1, "explanation":"..."},
   {"type":"빈칸 추론 (구)", "target":"(Original Phrase)", "question":"다음 빈칸에 들어갈 말로 가장 적절한 것을 고르시오.", "options":["Paraphrased Answer", "Distractor..."], "answer_index":1, "explanation":"..."},
@@ -110,7 +94,7 @@ Format: [
 ]
 Text: {text}`,
 
-    '무관한 문장': `Role: CSAT Creator. Create ONE "Irrelevant Sentence" question.
+    'irrelevant': `Role: CSAT Creator. Create ONE "Irrelevant Sentence" question.
 Numbering Rule: "The Last-5 Rule"
 1. Identify the LAST 5 sentences of the text.
 2. Mark them as ①, ②, ③, ④, ⑤ (Circled Numbers).
@@ -120,62 +104,34 @@ Numbering Rule: "The Last-5 Rule"
 Format: [{"type":"무관한 문장", "question":"다음 글에서 전체 흐름과 관계 없는 문장은?", "options":["①", "②", "③", "④", "⑤"], "answer_index":3, "explanation":"...", "modified_text":"Intro... ① Sentence... ② Sentence... ③ Distractor... ④ Sentence... ⑤ Sentence..."}]
 Text: {text}`,
 
-    '글의 순서': `Role: CSAT Creator. Create ONE "Order" question using the "3-Step Cutting Algorithm".
-1. **Introduction (Box)**: Use the first 1-2 sentences as the 'Given Text'.
+    'sequence': `Role: CSAT Creator. Create ONE "Order" question using the "3-Step Cutting Algorithm".
+1. **Introduction (Box)**: Use the first 1-2 sentences.
 2. **Segmentation**: Divide the remaining text into (A), (B), (C).
-   - **Cutting Points**: Cut BEFORE Signal Words (However, Therefore, For example) or Demonstratives (This, Such, These).
-   - **Balance**: Keep (A), (B), (C) similar in length.
-3. **Shuffling**: Shuffle (A), (B), (C) randomly for the question, but determine the correct logical order (e.g., B-C-A).
-4. **Chaining Explanation**: Explain the Logic Clues. 
-   - e.g. "Box ends with X -> (B) starts with 'This X'..."
-Format: [{"type":"글의 순서", "question":"주어진 글 다음에 이어질 글의 순서로 가장 적절한 것을 고르시오.", "options":["(A)-(C)-(B)", "(B)-(A)-(C)", "(B)-(C)-(A)", "(C)-(A)-(B)", "(C)-(B)-(A)"], "answer_index":3, "explanation":"(Simple Chaining Logic)...", "box":"...", "A":"...", "B":"...", "C":"..."}]
+   - Cut BEFORE Signal Words (However, Therefore) or Demonstratives.
+3. **Shuffling**: Shuffle (A), (B), (C) randomly, determining the correct logical order.
+4. **Chaining Explanation**: Explain the Logic Clues.
+Format: [{"type":"글의 순서", "question":"주어진 글 다음에 이어질 글의 순서로 가장 적절한 것을 고르시오.", "options":["(A)-(C)-(B)", ...], "answer_index":3, "explanation":"...", "box":"...", "A":"...", "B":"...", "C":"..."}]
 Text: {text}`,
 
-    '문장 넣기': `Role: CSAT Creator. Create ONE "Insertion" question using the "3-Step Extraction Algorithm".
-1. **Extraction Strategy (Targeting)**: Identify a 'Key Sentence' in the LAST 5 sentences.
-   - **Priority A**: Sentences starting with **Contrast** (However, Instead, Yet).
-   - **Priority B**: Sentences with **Demonstratives** (This, That, Such + Noun).
-   - *Goal*: Removing this sentence MUST create a **Logical Discontinuity (Gap)**.
+    'insertion': `Role: CSAT Creator. Create ONE "Insertion" question using the "3-Step Extraction Algorithm".
+1. **Extraction Strategy**: Identify a 'Key Sentence' in the LAST 5 sentences (Signal words highlight).
 2. **Layout & Numbering**:
    - Extract the 'Key Sentence' into the 'box'.
-   - Mark the remaining positions in the last part as ①, ②, ③, ④, ⑤ (Last-5 Rule).
-   - The empty spot where the Key Sentence was is the Correct Answer.
-3. **Explanation Rule**: focusing on **Gap & Link**.
-   - e.g. "Without the given sentence, the connection between ① and ② is awkward because..."
-Format: [{"type":"문장 넣기", "question":"글의 흐름으로 보아, 주어진 문장이 들어가기에 가장 적절한 곳을 고르시오.", "options":["①", "②", "③", "④", "⑤"], "answer_index":3, "explanation":"(Explain the Logical Gap & Link)...", "box":"Target Sentence...", "modified_text":"Intro... ① ... ② ... ③ ... ④ ... ⑤ ..."}]
+   - Mark the remaining positions in the last part as ①, ②, ③, ④, ⑤.
+3. **Explanation**: Focus on Logical Gap.
+Format: [{"type":"문장 넣기", "question":"글의 흐름으로 보아, 주어진 문장이 들어가기에 가장 적절한 곳을 고르시오.", "options":["①", "②", "③", "④", "⑤"], "answer_index":3, "explanation":"...", "box":"Target Sentence...", "modified_text":"Intro... ① ... ② ... ③ ... ④ ... ⑤ ..."}]
 Text: {text}`,
 
-    '요약문': `Role: CSAT Creator. Create ONE "Summary" question using the "3-Step Paraphrasing Strategy".
-1. **Structure Selection**: Construct a Summary Sentence using one of these patterns:
-   - **Type A (Contrast)**: "Although [Subject] is (A), it actually results in (B)."
-   - **Type B (Cause-Effect)**: "Due to the (A) feature, the result is (B)."
-2. **Targeting & Paraphrasing (Crucial)**:
-   - Identify keywords from the text for (A) and (B).
-   - Convert them into **Synonyms** or **Abstract Terms** (NOT the exact words from text).
-   - e.g. Text: 'hard' -> Answer: (A) 'demanding'.
+    'summary': `Role: CSAT Creator. Create ONE "Summary" question using the "3-Step Paraphrasing Strategy".
+1. **Structure Selection**: Construct a Summary Sentence (Contrast or Cause-Effect).
+2. **Targeting & Paraphrasing**: Convert keywords into **Synonyms** or **Abstract Terms**.
 3. **Option Pairing**: Create 5 pairs of (A) - (B).
-   - Distractors: Mix correct (A) with distinct wrong (B) (opposite/irrelevant).
-Format: [{"type":"요약문", "question":"다음 글의 내용을 한 문장으로 요약하고자 한다. 빈칸 (A), (B)에 들어갈 말로 가장 적절한 것은?", "options":["(A) word - (B) word", ...], "answer_index":1, "explanation":"본문의 'X'는 선지의 '(A) Y'로, 'Z'는 '(B) W'로 재진술되었습니다.", "summary_text":"Full Summary Sentence with (A) and (B) markers..."}]
+Format: [{"type":"요약문", "question":"다음 글의 내용을 한 문장으로 요약하고자 한다. 빈칸 (A), (B)에 들어갈 말로 가장 적절한 것은?", "options":["(A) word - (B) word", ...], "answer_index":1, "explanation":"...", "summary_text":"Full Summary Sentence with (A) and (B) markers..."}]
 Text: {text}`
 };
 
 let inputCount = 0;
 let currentType = '통합형';
-
-// Tab Switch
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-
-    const targetTab = document.getElementById('tab-' + tabName);
-    const targetNav = document.getElementById('nav-' + tabName);
-
-    if (targetTab && targetNav) {
-        targetTab.classList.add('active');
-        targetNav.classList.add('active');
-        if (tabName === 'generate') updateTextCount();
-    }
-}
 
 function addInputBox() { createInputCard(""); }
 function removeInputBox(id) { document.getElementById(id)?.remove(); updateTextCount(); }
@@ -184,25 +140,49 @@ function updateTextCount() {
     const texts = document.querySelectorAll('.source-textarea');
     let validCount = 0;
     texts.forEach(t => { if (t.value.trim()) validCount++; });
-    document.getElementById('text-count-badge').innerText = validCount || 1;
+    const badge = document.getElementById('text-count-badge');
+    if (badge) badge.innerText = validCount + "개";
+}
+
+function updateKeyStatus() {
+    const key = localStorage.getItem("gemini_api_key");
+    const statusEl = document.getElementById('api-key-status');
+    if (statusEl) {
+        if (key) {
+            statusEl.innerText = "등록됨";
+            statusEl.style.color = "#10b981"; // Green
+        } else {
+            statusEl.innerText = "미등록";
+            statusEl.style.color = "#ef4444"; // Red
+        }
+    }
 }
 
 function resetKey() {
     const currentKey = localStorage.getItem("gemini_api_key");
 
-    if (currentKey) {
-        // If key exists, ask if user wants to change it
-        if (!confirm("현재 저장된 API 키가 있습니다.\n새로운 키로 변경하시겠습니까?")) {
+    if (currentKey && currentKey !== "null" && currentKey !== "undefined") {
+        if (!confirm("현재 API 키가 등록되어 있습니다.\n새로운 키로 변경하시겠습니까? (취소 시 기존 키 유지)")) {
             return;
         }
     }
 
-    const newKey = prompt("새로운 Google API Key (AIza...)를 입력하세요:");
+    const newKey = prompt("Google API Key (AIza...)를 입력하세요:");
     if (newKey) {
         localStorage.setItem("gemini_api_key", newKey.trim());
-        alert("API 키가 성공적으로 저장되었습니다!");
+        updateKeyStatus();
+        alert("API 키가 저장되었습니다.");
     }
 }
+
+// Check key on load
+document.addEventListener('DOMContentLoaded', () => {
+    updateKeyStatus();
+});
+
+// AI Engine
+// Utility: Sleep function
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // AI Engine
 async function runAI() {
@@ -210,94 +190,168 @@ async function runAI() {
     const texts = [];
     textareas.forEach(area => { if (area.value.trim()) texts.push(area.value.trim()); });
 
-    const btn = document.getElementById('runBtn');
     const loading = document.getElementById('loading');
-    const emptyMsg = document.getElementById('empty-msg');
+    const emptyMsg = document.getElementById('empty-results-msg');
     const resultsContainer = document.getElementById('results-container');
     const statusText = document.getElementById('statusText');
 
-    if (!texts.length) { alert("지문을 입력해주세요."); switchTab('input'); return; }
+    if (!texts.length) {
+        alert("지문을 먼저 입력해주세요.");
+        document.querySelector('.add-btn')?.click();
+        return;
+    }
 
     let apiKey = localStorage.getItem("gemini_api_key");
-    if (!apiKey) {
-        apiKey = prompt("Google API Key (AIza...):");
-        if (!apiKey) return;
+    if (!apiKey || apiKey === "null" || apiKey === "undefined") {
+        apiKey = prompt("Google API Key (AIza...)를 입력하세요:");
+        if (!apiKey) {
+            alert("API 키 입력이 취소되어 생성을 중단합니다.");
+            return;
+        }
         localStorage.setItem("gemini_api_key", apiKey.trim());
+        updateKeyStatus();
     }
 
     resultsContainer.innerHTML = "";
-    globalGeneratedData = []; // Clear previous data
-    emptyMsg.style.display = 'none';
-    loading.style.display = 'block';
-    btn.disabled = true;
+    globalGeneratedData = [];
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    if (loading) loading.style.display = 'block';
 
     try {
-        statusText.innerText = "서버 연결 중...";
-        const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        if (!listResponse.ok) throw new Error("API Key Error");
-        const listData = await listResponse.json();
-        const validModel = listData.models.find(m => m.supportedGenerationMethods?.includes("generateContent"));
-        const modelName = validModel ? validModel.name.replace("models/", "") : "gemini-pro";
+        statusText.innerText = "Gemini 1.5 Flash 연결 중...";
 
-        // Determine Prompt
-        let template = PROMPTS[currentType] || PROMPTS['통합형'];
+        // Use Gemini 1.5 Flash explicitly as requested by user
+        const modelName = 'gemini-1.5-flash';
 
-
-        // Remove {rule} placeholder if it exists in any prompt to strictly follow new prompts
-        template = template.replace("{rule}", "");
-
-
+        // Sequential Processing Loop
         for (let i = 0; i < texts.length; i++) {
             const text = texts[i];
             const index = i + 1;
-            statusText.innerText = `생성 중... 지문 ${index}/${texts.length} (${currentType})`;
 
-            const finalPrompt = template.replace("{text}", text);
-
-            const genResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: finalPrompt }] }] })
-            });
-
-            if (genResponse.ok) {
-                const genData = await genResponse.json();
-                const rawText = genData.candidates[0].content.parts[0].text;
-                const jsonText = rawText.replace(/```json|```|```/g, "").trim();
-                let questions;
-                try {
-                    questions = JSON.parse(jsonText);
-                } catch (err) {
-                    console.error("JSON Parse Error", err);
-                    renderErrorCard(index, "결과 파싱 실패: " + err.message);
-                    continue;
-                }
-
-                // Handle single object or array
-                const qList = Array.isArray(questions) ? questions : [questions];
-
-                // Save to global data for download
-                globalGeneratedData.push({
-                    index: index,
-                    text: text,
-                    questions: qList,
-                    type: currentType
-                });
-
-                renderCardResult(index, text, qList, currentType);
+            let typesToGenerate = [];
+            if (currentType === 'all') {
+                const shuffled = [...ALL_TYPES].sort(() => 0.5 - Math.random());
+                typesToGenerate = shuffled.slice(0, 2);
             } else {
-                renderErrorCard(index, "API 호출 실패 (" + genResponse.status + ")");
+                typesToGenerate = [currentType];
+            }
+
+            for (const typeKey of typesToGenerate) {
+                let retryCount = 0;
+                let success = false;
+                const maxRetries = 3;
+
+                while (!success && retryCount < maxRetries) {
+                    try {
+                        let statusMsg = `Generating... Passage ${index}/${texts.length} (${typeKey})`;
+                        if (retryCount > 0) statusMsg += ` (Retry ${retryCount}/${maxRetries})`;
+                        statusText.innerText = statusMsg;
+
+                        let template = PROMPTS[typeKey];
+                        if (!template) {
+                            console.error("No prompt found for:", typeKey);
+                            break;
+                        }
+
+                        const finalPrompt = template.replace("{text}", text);
+
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{ text: finalPrompt }]
+                                }],
+                                generationConfig: {
+                                    response_mime_type: "application/json" // Force JSON output
+                                }
+                            })
+                        });
+
+                        // Handle Rate Limit (429) & Server Overload (503)
+                        if (response.status === 429 || response.status === 503) {
+                            const waitTime = 5000;
+                            statusText.innerText = `서버 혼잡(${response.status}). ${waitTime / 1000}초 대기 후 재시도...`;
+                            await sleep(waitTime);
+                            retryCount++;
+                            continue;
+                        }
+
+                        if (!response.ok) {
+                            if (response.status === 400) {
+                                localStorage.removeItem("gemini_api_key");
+                                updateKeyStatus();
+                                throw new Error("Google API 키가 정확한지 확인해주세요. (400 Bad Request)");
+                            }
+                            throw new Error(`Google API 오류: ${response.status}`);
+                        }
+
+                        const genData = await response.json();
+
+                        // Safety Filter Check
+                        if (!genData.candidates || !genData.candidates[0].content) {
+                            let blockedReason = "안전 필터에 의해 차단됨";
+                            if (genData.promptFeedback && genData.promptFeedback.blockReason) {
+                                blockedReason += ` (${genData.promptFeedback.blockReason})`;
+                            }
+                            renderErrorCard(index, `[${typeKey}] 생성 실패: ${blockedReason}`);
+                            success = true;
+                            break;
+                        }
+
+                        const rawText = genData.candidates[0].content.parts[0].text;
+                        const jsonText = rawText.replace(/```json|```|```/g, "").trim();
+                        let questions;
+
+                        try {
+                            questions = JSON.parse(jsonText);
+                        } catch (err) {
+                            console.error("JSON Parse Error", err);
+                            if (retryCount < maxRetries - 1) {
+                                throw new Error("데이터 파싱 실패 (재시도 중...)");
+                            } else {
+                                renderErrorCard(index, `[${typeKey}] 데이터 처리 실패: ${err.message}`);
+                                success = true;
+                                break;
+                            }
+                        }
+
+                        const qList = Array.isArray(questions) ? questions : [questions];
+
+                        globalGeneratedData.push({
+                            index: index,
+                            text: text,
+                            questions: qList,
+                            type: typeKey
+                        });
+
+                        renderCardResult(index, text, qList, typeKey);
+                        success = true;
+
+                        await sleep(1500);
+
+                    } catch (err) {
+                        console.error(`Attempt ${retryCount + 1} failed:`, err);
+
+                        if (retryCount >= maxRetries - 1) {
+                            renderErrorCard(index, `[${typeKey}] 실패: ${err.message}`);
+                            success = true;
+                        } else {
+                            await sleep(2000);
+                        }
+                        retryCount++;
+                    }
+                }
             }
         }
     } catch (e) {
-        alert("Error: " + e.message);
+        alert("오류 발생: " + e.message);
     } finally {
-        loading.style.display = 'none';
-        btn.disabled = false;
+        if (loading) loading.style.display = 'none';
+        statusText.innerText = "모든 생성이 완료되었습니다.";
     }
 }
 
-// Universal Renderer for Separate Question/Answer Sections
 function renderCardResult(index, originalText, questions, globalType) {
     const container = document.getElementById('results-container');
 
@@ -457,26 +511,27 @@ function createInputCard(text = "", title = "") {
     newCard.className = 'input-card';
     newCard.id = `card-${inputCount}`;
     newCard.innerHTML = `
-    <div class="card-top">
-        <div style="display:flex; align-items:center; gap:8px; flex:1;">
-            <span><i class="fas fa-pen"></i></span>
-            <input type="text" class="passage-title-input" placeholder="지문 제목 입력..." value="${title}" 
-            style="border:none; border-bottom: 1px solid #ddd; font-weight:700; font-size:15px; width:100%; outline:none; background:transparent; padding-bottom: 4px;">
-        </div>
-        <span class="delete-btn" onclick="removeInputBox('card-${inputCount}')"><i class="fas fa-trash"></i> 삭제</span>
-    </div>
-    <textarea class="source-textarea" rows="10" placeholder="여기에 영어 지문을 입력하세요...">${text}</textarea>
+<div class="card-top">
+<div style="display:flex; align-items:center; gap:8px; flex:1;">
+<span><i class="fas fa-pen"></i></span>
+<input type="text" class="passage-title-input" placeholder="지문 제목 입력..." value="${title}" 
+style="border:none; border-bottom: 1px solid #ddd; font-weight:700; font-size:15px; width:100%; outline:none; background:transparent; padding-bottom: 4px;">
+</div>
+<span class="delete-btn" onclick="removeInputBox('card-${inputCount}')"><i class="fas fa-trash"></i> 삭제</span>
+</div>
+<textarea class="source-textarea" rows="10" placeholder="여기에 영어 지문을 입력하세요...">${text}</textarea>
 `;
     list.appendChild(newCard);
     updateTextCount();
 }
 
 function selectType(el) {
-    document.querySelectorAll('.type-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
-    currentType = el.innerText.replace(' 통합형', '통합형').trim();
-    document.querySelector('.page-title h2').innerText = currentType;
+    currentType = el.getAttribute('data-type');
 
+    // Auto-Run Generation
+    runAI();
 }
 
 
@@ -496,46 +551,45 @@ async function saveAsHTML() {
     } catch (e) {
         // Fallback CSS
         cssText = `
-            body { font-family: sans-serif; }
-            .exam-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 50px; }
-            .question-card/ { break-inside: avoid; margin-bottom: 30px; }
-            .answer-section { page-break-before: always; margin-top: 50px; }
-            .print-divider { display: none; }
-            @media print {
-                 .exam-layout { display: block; column-count: 2; column-gap: 40px; }
-                 .answer-section { page-break-before: always; }
-            }
-        `;
+body { font-family: sans-serif; }
+.exam-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 50px; }
+.question-card/ { break-inside: avoid; margin-bottom: 30px; }
+.answer-section { page-break-before: always; margin-top: 50px; }
+.print-divider { display: none; }
+@media print {
+     .exam-layout { display: block; column-count: 2; column-gap: 40px; }
+     .answer-section { page-break-before: always; }
+}
+`;
     }
 
     const fullHtml = `
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>CSAT Exam Paper</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        ${cssText}
-        /* Overrides for standalone file */
-        body { padding: 40px; max-width: 1000px; margin: 0 auto; background: white; }
-        .print-divider { border-top: 2px dashed #ccc; margin: 50px 0; }
-    </style>
+<meta charset="UTF-8">
+<title>CSAT Exam Paper</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+${cssText}
+/* Overrides for standalone file */
+body { padding: 40px; max-width: 1000px; margin: 0 auto; background: white; }
+.print-divider { border-top: 2px dashed #ccc; margin: 50px 0; }
+</style>
 </head>
 <body>
-    <h1 style="text-align:center; margin-bottom:40px; border-bottom:2px solid #333; padding-bottom:15px;">수능 영어 변형문제</h1>
-    
-    <!-- Question Section -->
-    ${examContent}
+<h1 style="text-align:center; margin-bottom:40px; border-bottom:2px solid #333; padding-bottom:15px;">수능 영어 변형문제</h1>
 
-    <hr class="print-divider">
+<!-- Question Section -->
+${examContent}
 
-    <!-- Answer Section -->
-    ${answerContent}
+<hr class="print-divider">
+
+<!-- Answer Section -->
+${answerContent}
 
 </body>
 </html>`;
-
     const blob = new Blob([fullHtml], { type: 'text/html' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

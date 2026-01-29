@@ -643,3 +643,41 @@ screen and (min-width: 1000px) {
     /* Answers also in 2 columns if preferred, or 1 */
   }
 }
+
+/* Sidebar Styles */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #e1e4e8;
+  border-radius: 3px;
+}
+
+.sidebar-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 15px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #4e4b66;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  font-family: 'Pretendard', sans-serif;
+}
+
+.sidebar-item:hover {
+  background: #f5f7fa;
+  color: var(--primary);
+}
+
+.sidebar-item.active {
+  background: #e0e7ff;
+  color: var(--primary);
+  font-weight: 700;
+}
