@@ -67,18 +67,15 @@ Text: {text}`,
     'grammar': `Role: CSAT Creator. Create ONE "Grammar" question.
 Requirements:
 1. **Focus on Key Grammar**: Subject-Verb Agreement, Voice, Participles, Relative Clauses.
-2. **Distribution**: Spread 5 options evenly.
-3. **Underlining**: ONE option must be incorrect.
-Format: [{"type":"어법", "question":"다음 글의 밑줄 친 부분 중, 어법상 틀린 것은?", "options":["(1)", "(2)", "(3)", "(4)", "(5)"], "answer_index":3, "explanation":"...", "modified_text":"Full text with (1) <u>word</u> markings..."}] 
+2. **Underlining**: Mark 5 parts with circled numbers ①, ②, ③, ④, ⑤ and <u>underline</u>. One MUST be incorrect.
+Format: [{"type":"어법", "question":"다음 글의 밑줄 친 부분 중, 어법상 틀린 것은?", "options":["①", "②", "③", "④", "⑤"], "answer_index":3, "explanation":"...", "modified_text":"Full text with ① <u>word</u> markings..."}] 
 Text: {text}`,
 
     'vocabulary': `Role: CSAT Creator. Create ONE "Vocabulary" question.
 Requirements: **HIGH DIFFICULTY LOGIC**.
 1. **Global Coherence**: The target word must be a KEYWORD for the Main Idea. The WRONG choice (answer) must **contradict** the main flow.
-2. **Intra-sentence Logic**: Prioritize sentences with Connectives (However, Therefore).
-3. **Distribution**: Select 5 words evenly distributed.
-4. **Underlining**: Return "modified_text" with 5 numbered underlines around the target words (e.g. "(1) <u>word</u>").
-Format: [{"type":"어휘", "question":"다음 글의 밑줄 친 부분 중, 문맥상 낱말의 쓰임이 적절하지 않은 것은?", "options":["(1)", "(2)", "(3)", "(4)", "(5)"], "answer_index":3, "explanation":"...", "modified_text":"Full text with (1) <u>word</u> markings..."}]
+2. **Underlining**: Mark 5 words with circled numbers ①, ②, ③, ④, ⑤ and <u>underline</u>.
+Format: [{"type":"어휘", "question":"다음 글의 밑줄 친 부분 중, 문맥상 낱말의 쓰임이 적절하지 않은 것은?", "options":["①", "②", "③", "④", "⑤"], "answer_index":3, "explanation":"...", "modified_text":"Full text with ① <u>word</u> markings..."}]
 Text: {text}`,
 
     'blank': `Role: CSAT Creator. Create A SET OF 4 "Blank Inference" questions based on the text.
@@ -149,7 +146,7 @@ function updateKeyStatus() {
     const statusEl = document.getElementById('api-key-status');
     if (statusEl) {
         if (key) {
-            statusEl.innerText = "등록됨";
+            statusEl.innerText = "등록됨" + (activeModel ? ` (${activeModel})` : "");
             statusEl.style.color = "#10b981"; // Green
         } else {
             statusEl.innerText = "미등록";
@@ -158,34 +155,162 @@ function updateKeyStatus() {
     }
 }
 
-function resetKey() {
-    const currentKey = localStorage.getItem("gemini_api_key");
+// --- Modal Logic ---
+let modalCallback = null;
 
-    if (currentKey && currentKey !== "null" && currentKey !== "undefined") {
-        if (!confirm("현재 API 키가 등록되어 있습니다.\n새로운 키로 변경하시겠습니까? (취소 시 기존 키 유지)")) {
-            return;
-        }
+function showModal({ title, content, hasInput = false, inputPlaceholder = "", confirmText = "확인", showCancel = true, onConfirm = null }) {
+    const modal = document.getElementById('custom-modal');
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-content').innerHTML = content; // Allow HTML
+
+    const inputContainer = document.getElementById('modal-input-container');
+    const input = document.getElementById('modal-input');
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+
+    if (hasInput) {
+        inputContainer.style.display = 'block';
+        input.value = '';
+        input.placeholder = inputPlaceholder;
+        setTimeout(() => input.focus(), 100); // Focus after render
+    } else {
+        inputContainer.style.display = 'none';
     }
 
-    const newKey = prompt("Google API Key (AIza...)를 입력하세요:");
-    if (newKey) {
-        localStorage.setItem("gemini_api_key", newKey.trim());
-        updateKeyStatus();
-        alert("API 키가 저장되었습니다.");
+    cancelBtn.style.display = showCancel ? 'block' : 'none';
+    confirmBtn.innerText = confirmText;
+
+    modal.style.display = 'flex';
+    modalCallback = onConfirm;
+
+    // Handle Enter key in input
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') confirmAction();
+    };
+
+    confirmBtn.onclick = confirmAction;
+}
+
+function confirmAction() {
+    const input = document.getElementById('modal-input');
+    const value = input.value;
+    if (modalCallback) {
+        modalCallback(value);
+    } else {
+        closeModal();
     }
 }
 
-// Check key on load
+function closeModal() {
+    document.getElementById('custom-modal').style.display = 'none';
+    modalCallback = null;
+}
+
+function resetKey() {
+    const currentKey = localStorage.getItem("gemini_api_key");
+
+    showModal({
+        title: "API Key 설정",
+        content: currentKey ? "현재 키가 등록되어 있습니다. 새로운 키를 입력하면 교체됩니다." : "Google Gemini API 키를 입력하세요.",
+        hasInput: true,
+        inputPlaceholder: "AIza로 시작하는 키 입력...",
+        confirmText: "저장",
+        onConfirm: (newKey) => {
+            if (newKey && newKey.trim()) {
+                localStorage.setItem("gemini_api_key", newKey.trim());
+                updateKeyStatus();
+                closeModal();
+                showModal({ title: "완료", content: "API 키가 안전하게 저장되었습니다.", showCancel: false });
+                autoDetectModel(); // Auto-check new key immediately
+            } else {
+                closeModal();
+            }
+        }
+    });
+}
+
+// --- Auto Model Detection ---
+let activeModel = 'gemini-1.5-flash'; // Default fallback
+
+async function autoDetectModel(silent = true) {
+    const apiKey = localStorage.getItem("gemini_api_key");
+    if (!apiKey) return;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        if (!response.ok) return; // Silent fail
+
+        const data = await response.json();
+        const availableModels = data.models ? data.models.map(m => m.name.replace('models/', '')) : [];
+
+        if (availableModels.length > 0) {
+            // Preference List
+            const preferred = [
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-latest',
+                'gemini-1.5-pro',
+                'gemini-1.5-pro-latest',
+                'gemini-pro'
+            ];
+
+            let bestMatch = null;
+            for (const p of preferred) {
+                if (availableModels.includes(p)) {
+                    bestMatch = p;
+                    break;
+                }
+            }
+
+            // Fallback to first available if no preference matched
+            activeModel = bestMatch || availableModels[0];
+            console.log("Auto-detected Model:", activeModel);
+            updateKeyStatus(); // Update UI to show model
+
+            if (!silent) {
+                showModal({ title: "연결 성공", content: `모델이 자동으로 설정되었습니다:<br><b style="color:#2563eb; font-size:1.1em;">${activeModel}</b>`, showCancel: false });
+            }
+        }
+    } catch (e) {
+        console.error("Auto detection failed", e);
+    }
+}
+
+// Check key & Auto detect on load
 document.addEventListener('DOMContentLoaded', () => {
+    updateTextCount();
     updateKeyStatus();
+    autoDetectModel(); // Run silently on load
 });
+
+// Check API Connection Manually
+async function checkApiConnection() {
+    const apiKey = localStorage.getItem("gemini_api_key");
+    if (!apiKey) {
+        showModal({ title: "알림", content: "API 키가 등록되어 있지 않습니다.<br>설정 메뉴에서 키를 등록해주세요.", showCancel: false });
+        // Old resetKey call removed, user should use the UI
+        return;
+    }
+
+    const btn = document.querySelector('button[onclick="checkApiConnection()"]');
+    const originalText = btn ? btn.innerHTML : null;
+    if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 연결 확인 중...';
+
+    // We simply run autoDetectModel explicitly (silent = false) to show the feedback
+    await autoDetectModel(false);
+
+    if (btn && originalText) btn.innerHTML = originalText;
+}
 
 // AI Engine
 // Utility: Sleep function
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // AI Engine
-async function runAI() {
+let activeMode = 'selected'; // 'all' or 'selected'
+
+async function runAI(mode = 'selected') {
+    activeMode = mode;
+
     const textareas = document.querySelectorAll('.source-textarea');
     const texts = [];
     textareas.forEach(area => { if (area.value.trim()) texts.push(area.value.trim()); });
@@ -210,6 +335,7 @@ async function runAI() {
         }
         localStorage.setItem("gemini_api_key", apiKey.trim());
         updateKeyStatus();
+        await autoDetectModel(); // Detect model after new key
     }
 
     resultsContainer.innerHTML = "";
@@ -218,22 +344,30 @@ async function runAI() {
     if (loading) loading.style.display = 'block';
 
     try {
-        statusText.innerText = "Gemini 1.5 Flash 연결 중...";
+        statusText.innerText = `${activeModel} 연결 중...`;
 
-        // Use Gemini 1.5 Flash explicitly as requested by user
-        const modelName = 'gemini-1.5-flash';
+        // Use Auto-detected Model
+        const modelName = activeModel;
 
         // Sequential Processing Loop
         for (let i = 0; i < texts.length; i++) {
             const text = texts[i];
             const index = i + 1;
 
+            // Determine which types to generate based on Mode
             let typesToGenerate = [];
-            if (currentType === 'all') {
-                const shuffled = [...ALL_TYPES].sort(() => 0.5 - Math.random());
-                typesToGenerate = shuffled.slice(0, 2);
+
+            if (activeMode === 'all') {
+                typesToGenerate = [...ALL_TYPES];
             } else {
-                typesToGenerate = [currentType];
+                const checkedBoxes = document.querySelectorAll('input[name="qtype"]:checked');
+                typesToGenerate = Array.from(checkedBoxes).map(cb => cb.value);
+
+                if (typesToGenerate.length === 0) {
+                    alert("생성할 문제 유형을 최소 1개 이상 선택해주세요.");
+                    if (loading) loading.style.display = 'none';
+                    return;
+                }
             }
 
             for (const typeKey of typesToGenerate) {
@@ -429,7 +563,6 @@ function renderCardResult(index, originalText, questions, globalType) {
         // Question HTML: ONLY contents, no hidden answers
         const questionHtml = `
             <div class="question-card">
-                <div style="font-weight:bold; color:#555; font-size:12px; margin-bottom:4px;">[${qType}]</div>
                 <div style="font-family:'Pretendard'; font-size:16px; font-weight:700; color:#000; margin-bottom:12px;">
                     <span style="font-size:18px;">${qNum}.</span> ${q.question || "다음 물음에 답하시오."}
                 </div>
@@ -438,9 +571,14 @@ function renderCardResult(index, originalText, questions, globalType) {
                 ${qType === '글의 순서' ? `<div style="font-family:'Times New Roman'; font-size:16px; margin-bottom:15px;">${questionBody}</div>` : ''}
                  ${q.box && qType !== '글의 순서' ? `<div style="font-family:'Times New Roman'; font-size:16px; margin-bottom:15px;">${questionBody}</div>` : ''}
                 
-                <div class="options-list" style="display:grid; grid-template-columns:1fr; gap:6px; font-size:15px;">
-                    ${q.options.map((o, k) => `<div>${k + 1}. ${o}</div>`).join('')}
-                </div>
+                ${(qType !== '어법' && qType !== '어휘' && qType !== 'grammar' && qType !== 'vocabulary') ?
+                `<div class="options-list" style="display:grid; grid-template-columns:1fr; gap:6px; font-size:15px;">
+                    ${q.options.map((o, k) => {
+                    // Strip existing numbering patterns like (1), 1., ①
+                    const cleanOption = o.replace(/^(\(?[0-9]+\)|[①-⑮]|\(?[A-E]\))\.?\s*/i, '');
+                    return `<div>${['①', '②', '③', '④', '⑤'][k] || (k + 1)} ${cleanOption}</div>`;
+                }).join('')}
+                </div>` : ''}
             </div>
         `;
         examLayout.innerHTML += questionHtml;
@@ -525,14 +663,16 @@ style="border:none; border-bottom: 1px solid #ddd; font-weight:700; font-size:15
     updateTextCount();
 }
 
-function selectType(el) {
-    document.querySelectorAll('.sidebar-item').forEach(p => p.classList.remove('active'));
-    el.classList.add('active');
-    currentType = el.getAttribute('data-type');
-
-    // Auto-Run Generation
-    runAI();
+// Checkbox Toggle All
+function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('input[name="qtype"]');
+    for (let i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = source.checked;
+    }
 }
+
+// Remove old selectType function
+// function selectType(el) { ... } deleted
 
 
 async function saveAsHTML() {

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSAT Gen - Passage Management</title>
+    <title>Top English Academy 변형문제</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <!-- PDF.js CDN -->
@@ -17,7 +17,8 @@
 <body>
 
     <header>
-        <div class="logo"><i class="fas fa-brain"></i> CSAT Gen <span class="badge">BETA</span></div>
+        <div class="logo"><i class="fas fa-graduation-cap"></i> Top English Academy <span class="badge">변형문제</span>
+        </div>
         <div style="flex:1;"></div>
     </header>
 
@@ -28,42 +29,64 @@
 
             <div style="flex:1; overflow-y:auto;">
                 <div class="sidebar-group" style="margin-bottom:25px;">
-                    <button class="sidebar-item active" data-type="all" onclick="selectType(this)"
-                        style="width:100%; text-align:left; padding:12px 15px; border:none; background:#f5f7fa; border-radius:8px; cursor:pointer; font-weight:700; color:#4f46e5; margin-bottom:5px; font-size:14px; transition:0.2s;">
-                        ⚡ 전체 변형문제 생성
+                    <!-- Generate All Button -->
+                    <button class="generate-all-btn" onclick="runAI('all')">
+                        <i class="fas fa-layer-group"></i> 전체 문제 일괄 생성
                     </button>
+
+                    <!-- Divider -->
+                    <div style="text-align:center; margin: 15px 0;">
+                        <span style="font-size:11px; color:#bbb; background:#fff; padding:0 10px;">개별 선택 생성</span>
+                    </div>
+
+                    <!-- Generate Selected Button -->
+                    <button class="generate-selected-btn" onclick="runAI('selected')">
+                        <i class="fas fa-check-double"></i> 선택한 문제만 생성
+                    </button>
+                    <label
+                        style="font-size:12px; color:#888; display:block; text-align:center; margin-top:8px; cursor:pointer;">
+                        <input type="checkbox" onchange="toggleAll(this)" style="vertical-align:middle;"> 전체 선택/해제
+                    </label>
                 </div>
 
                 <div class="sidebar-group" style="margin-bottom:25px;">
-                    <div class="group-title"
-                        style="font-size:12px; font-weight:700; color:#9fa6b2; margin-bottom:10px; padding-left:5px;">
-                        Part 1. 대의 파악</div>
-                    <button class="sidebar-item" data-type="purpose" onclick="selectType(this)">1. 글의 목적</button>
-                    <button class="sidebar-item" data-type="mood" onclick="selectType(this)">2. 심경 변화</button>
-                    <button class="sidebar-item" data-type="claim" onclick="selectType(this)">3. 글의 주장</button>
-                    <button class="sidebar-item" data-type="underlying" onclick="selectType(this)">4. 함축 의미</button>
-                    <button class="sidebar-item" data-type="gist" onclick="selectType(this)">5. 글의 요지</button>
-                    <button class="sidebar-item" data-type="topic" onclick="selectType(this)">6. 글의 주제</button>
-                    <button class="sidebar-item" data-type="title" onclick="selectType(this)">7. 글의 제목</button>
+                    <div class="group-title">Part 1. 대의 파악</div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-purpose" value="purpose"
+                            name="qtype"><label for="c-purpose">글의 목적</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-mood" value="mood"
+                            name="qtype"><label for="c-mood">심경 변화</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-claim" value="claim"
+                            name="qtype"><label for="c-claim">글의 주장</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-underlying" value="underlying"
+                            name="qtype"><label for="c-underlying">함축 의미</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-gist" value="gist"
+                            name="qtype"><label for="c-gist">글의 요지</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-topic" value="topic"
+                            name="qtype"><label for="c-topic">글의 주제</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-title" value="title"
+                            name="qtype"><label for="c-title">글의 제목</label></div>
                 </div>
 
                 <div class="sidebar-group" style="margin-bottom:25px;">
-                    <div class="group-title"
-                        style="font-size:12px; font-weight:700; color:#9fa6b2; margin-bottom:10px; padding-left:5px;">
-                        Part 2. 어법/어휘</div>
-                    <button class="sidebar-item" data-type="grammar" onclick="selectType(this)">8. 어법</button>
-                    <button class="sidebar-item" data-type="vocabulary" onclick="selectType(this)">9. 어휘</button>
+                    <div class="group-title">Part 2. 어법/어휘</div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-grammar" value="grammar"
+                            name="qtype"><label for="c-grammar">어법</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-vocabulary" value="vocabulary"
+                            name="qtype"><label for="c-vocabulary">어휘</label></div>
                 </div>
 
                 <div class="sidebar-group" style="margin-bottom:25px;">
-                    <div class="group-title"
-                        style="font-size:12px; font-weight:700; color:#9fa6b2; margin-bottom:10px; padding-left:5px;">
-                        Part 3. 논리/빈칸</div>
-                    <button class="sidebar-item" data-type="blank" onclick="selectType(this)">10. 빈칸 추론</button>
-                    <button class="sidebar-item" data-type="irrelevant" onclick="selectType(this)">11. 무관한 문장</button>
-                    <button class="sidebar-item" data-type="sequence" onclick="selectType(this)">12. 글의 순서</button>
-                    <button class="sidebar-item" data-type="insertion" onclick="selectType(this)">13. 문장 넣기</button>
-                    <button class="sidebar-item" data-type="summary" onclick="selectType(this)">14. 요약문</button>
+                    <div class="group-title">Part 3. 논리/빈칸</div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-blank" value="blank"
+                            name="qtype"><label for="c-blank">빈칸 추론</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-irrelevant" value="irrelevant"
+                            name="qtype"><label for="c-irrelevant">무관한 문장</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-sequence" value="sequence"
+                            name="qtype"><label for="c-sequence">글의 순서</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-insertion" value="insertion"
+                            name="qtype"><label for="c-insertion">문장 넣기</label></div>
+                    <div class="sidebar-checkbox-item"><input type="checkbox" id="c-summary" value="summary"
+                            name="qtype"><label for="c-summary">요약문</label></div>
                 </div>
             </div>
 
@@ -76,6 +99,9 @@
                     <i class="fas fa-key" style="margin-right:8px; color:#aaa;"></i> API Key 관리
                     <span id="api-key-status"
                         style="font-size:11px; color:#22c55e; font-weight:700; margin-left:auto;"></span>
+                </button>
+                <button class="sidebar-item" onclick="checkApiConnection()">
+                    <i class="fas fa-wifi" style="margin-right:8px; color:#aaa;"></i> API 연결 테스트
                 </button>
             </div>
         </div>
@@ -131,9 +157,9 @@
                 <div id="results-container"></div>
 
                 <div id="empty-results-msg" style="text-align:center; padding:60px 0; color:#a0a3bd;">
-                    <i class="fas fa-arrow-left" style="font-size:24px; margin-bottom:15px; opacity:0.5;"></i><br>
-                    왼쪽 사이드바에서 <b>문제 유형을 클릭</b>하면<br>
-                    여기에 바로 문제가 생성됩니다.
+                    <i class="fas fa-check-square" style="font-size:24px; margin-bottom:15px; opacity:0.5;"></i><br>
+                    왼쪽 사이드바에서 <b>원하는 유형을 체크</b>하고<br>
+                    <b>[선택한 문제 생성하기]</b> 버튼을 눌러주세요.
                 </div>
             </div>
 
@@ -141,6 +167,21 @@
     </div>
 
     <script src="app.js" defer></script>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div id="modal-title" class="modal-title">Title</div>
+            <div id="modal-content" class="modal-content">Content</div>
+            <div id="modal-input-container" style="display:none;">
+                <input type="text" id="modal-input" class="modal-input" placeholder="Type here...">
+            </div>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="modal-btn cancel" onclick="closeModal()">취소</button>
+                <button id="modal-confirm-btn" class="modal-btn confirm">확인</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
