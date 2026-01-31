@@ -105,9 +105,15 @@ Text: {text}`,
 1. **Introduction (Box)**: Use the first 1-2 sentences.
 2. **Segmentation**: Divide the remaining text into (A), (B), (C).
    - Cut BEFORE Signal Words (However, Therefore) or Demonstratives.
-3. **Shuffling**: Shuffle (A), (B), (C) randomly, determining the correct logical order.
-4. **Chaining Explanation**: Explain the Logic Clues.
-Format: [{"type":"글의 순서", "question":"주어진 글 다음에 이어질 글의 순서로 가장 적절한 것을 고르시오.", "options":["(A)-(C)-(B)", ...], "answer_index":3, "explanation":"...", "box":"...", "A":"...", "B":"...", "C":"..."}]
+3. **Shuffling**: Shuffle (A), (B), (C) randomly from the correct order.
+4. **Options**: MUST strictly follow this format:
+   ① (A) - (C) - (B)
+   ② (B) - (A) - (C)
+   ③ (B) - (C) - (A)
+   ④ (C) - (A) - (B)
+   ⑤ (C) - (B) - (A)
+   (Ensure the Correct Answer is among these and set answer_index accordingly)
+Format: [{"type":"글의 순서", "question":"주어진 글 다음에 이어질 글의 순서로 가장 적절한 것은?", "options":["(A) - (C) - (B)", "(B) - (A) - (C)", "(B) - (C) - (A)", "(C) - (A) - (B)", "(C) - (B) - (A)"], "answer_index":3, "explanation":"...", "box":"...", "A":"...", "B":"...", "C":"..."}]
 Text: {text}`,
 
     'insertion': `Role: CSAT Creator. Create ONE "Insertion" question using the "3-Step Extraction Algorithm".
@@ -373,12 +379,12 @@ async function runAI(mode = 'selected') {
             for (const typeKey of typesToGenerate) {
                 let retryCount = 0;
                 let success = false;
-                const maxRetries = 3;
+                const maxRetries = 5; // Increased from 3 to 5
 
                 while (!success && retryCount < maxRetries) {
                     try {
                         let statusMsg = `Generating... Passage ${index}/${texts.length} (${typeKey})`;
-                        if (retryCount > 0) statusMsg += ` (Retry ${retryCount}/${maxRetries})`;
+                        if (retryCount > 0) statusMsg += ` (재시도 중: ${retryCount}/${maxRetries})`;
                         statusText.innerText = statusMsg;
 
                         let template = PROMPTS[typeKey];
@@ -404,9 +410,19 @@ async function runAI(mode = 'selected') {
 
                         // Handle Rate Limit (429) & Server Overload (503)
                         if (response.status === 429 || response.status === 503) {
-                            const waitTime = 5000;
-                            statusText.innerText = `서버 혼잡(${response.status}). ${waitTime / 1000}초 대기 후 재시도...`;
+                            // Exponential Backoff: 5s, 10s, 20s, 40s...
+                            const waitTime = 5000 * Math.pow(2, retryCount);
+
+                            // Countdown UI
+                            let remaining = waitTime / 1000;
+                            const countdownInterval = setInterval(() => {
+                                statusText.innerText = `서버 혼잡(${response.status}). ${remaining}초 후 재시도합니다...`;
+                                remaining--;
+                            }, 1000);
+
                             await sleep(waitTime);
+                            clearInterval(countdownInterval);
+
                             retryCount++;
                             continue;
                         }
@@ -462,7 +478,8 @@ async function runAI(mode = 'selected') {
                         renderCardResult(index, text, qList, typeKey);
                         success = true;
 
-                        await sleep(1500);
+                        // Prevent Rate Limit: Wait 4 seconds between requests
+                        await sleep(4000);
 
                     } catch (err) {
                         console.error(`Attempt ${retryCount + 1} failed:`, err);
@@ -547,7 +564,11 @@ function renderCardResult(index, originalText, questions, globalType) {
 
         if (q.modified_text) questionBody = q.modified_text;
         if (q.box) questionBody = `<div style="border:1px solid #000; padding:10px; margin-bottom:15px; font-weight:500;">${q.box}</div>` + (q.A ? `(A) ${q.A}<br><br>(B) ${q.B}<br><br>(C) ${q.C}` : questionBody);
-        if (q.summary_text) questionBody = `<div style="border:1px solid #000; padding:10px; margin-bottom:15px; font-weight:500;">${q.summary_text}</div>`;
+        if (q.summary_text) {
+            // Add Arrow for Summary
+            questionBody = `<div style="text-align:center; font-size:20px; font-weight:bold; margin-bottom:5px;">↓</div>` +
+                `<div style="border:1px solid #000; padding:10px; margin-bottom:15px; font-weight:500;">${q.summary_text}</div>`;
+        }
 
         // Correctly handle implicit or explicit blank types
         if ((qType.includes('빈칸') || q.type === 'Blank') && q.target) {
