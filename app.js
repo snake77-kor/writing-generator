@@ -101,18 +101,21 @@ Numbering Rule: "The Last-5 Rule"
 Format: [{"type":"무관한 문장", "question":"다음 글에서 전체 흐름과 관계 없는 문장은?", "options":["①", "②", "③", "④", "⑤"], "answer_index":3, "explanation":"...", "modified_text":"Intro... ① Sentence... ② Sentence... ③ Distractor... ④ Sentence... ⑤ Sentence..."}]
 Text: {text}`,
 
-    'sequence': `Role: CSAT Creator. Create ONE "Order" question using the "3-Step Cutting Algorithm".
-1. **Introduction (Box)**: Use the first 1-2 sentences.
-2. **Segmentation**: Divide the remaining text into (A), (B), (C).
-   - Cut BEFORE Signal Words (However, Therefore) or Demonstratives.
-3. **Shuffling**: Shuffle (A), (B), (C) randomly from the correct order.
-4. **Options**: MUST strictly follow this format:
-   ① (A) - (C) - (B)
-   ② (B) - (A) - (C)
-   ③ (B) - (C) - (A)
-   ④ (C) - (A) - (B)
-   ⑤ (C) - (B) - (A)
-   (Ensure the Correct Answer is among these and set answer_index accordingly)
+    'sequence': `Role: CSAT Creator. Create ONE "Order" question.
+1. **Introduction (Box)**: Use the first 20-25% of the text.
+2. **Segmentation Strategy (Critical)**:
+   - Divide the remaining text into (A), (B), (C).
+   - **Balance**: Ensure (A), (B), and (C) correspond to roughly similar lengths (visually balanced). Avoid making one segment extremely short or long.
+   - **Logical Clues**: The *start* of each segment (or the logic linking to it) SHOULD ideally contain a clue (Connectives like 'However', 'Therefore'; Pronouns like 'He', 'They'; Demonstratives like 'This', 'Such').
+   - If intrinsic clues are weak, you may slightly start the segment with a strong sentence that connects to the previous part.
+3. **Logic**: Determine the logical order.
+4. **Options - STRICT RULE**: You must output EXACTLY these options (no others allowed):
+   (1) (A) - (C) - (B)
+   (2) (B) - (A) - (C)
+   (3) (B) - (C) - (A)
+   (4) (C) - (A) - (B)
+   (5) (C) - (B) - (A)
+   *Note: (A) - (B) - (C) is FORBIDDEN.*
 Format: [{"type":"글의 순서", "question":"주어진 글 다음에 이어질 글의 순서로 가장 적절한 것은?", "options":["(A) - (C) - (B)", "(B) - (A) - (C)", "(B) - (C) - (A)", "(C) - (A) - (B)", "(C) - (B) - (A)"], "answer_index":3, "explanation":"...", "box":"...", "A":"...", "B":"...", "C":"..."}]
 Text: {text}`,
 
@@ -125,11 +128,15 @@ Text: {text}`,
 Format: [{"type":"문장 넣기", "question":"글의 흐름으로 보아, 주어진 문장이 들어가기에 가장 적절한 곳을 고르시오.", "options":["①", "②", "③", "④", "⑤"], "answer_index":3, "explanation":"...", "box":"Target Sentence...", "modified_text":"Intro... ① ... ② ... ③ ... ④ ... ⑤ ..."}]
 Text: {text}`,
 
-    'summary': `Role: CSAT Creator. Create ONE "Summary" question using the "3-Step Paraphrasing Strategy".
-1. **Structure Selection**: Construct a Summary Sentence (Contrast or Cause-Effect).
-2. **Targeting & Paraphrasing**: Convert keywords into **Synonyms** or **Abstract Terms**.
-3. **Option Pairing**: Create 5 pairs of (A) - (B).
-Format: [{"type":"요약문", "question":"다음 글의 내용을 한 문장으로 요약하고자 한다. 빈칸 (A), (B)에 들어갈 말로 가장 적절한 것은?", "options":["(A) word - (B) word", ...], "answer_index":1, "explanation":"...", "summary_text":"Full Summary Sentence with (A) and (B) markers..."}]
+    'summary': `Role: CSAT Creator. Create ONE "Summary" question.
+1. **Language**: The Summary Sentence MUST be in **ENGLISH**.
+2. **Options**: The words for (A) and (B) MUST be in **ENGLISH**.
+3. **Structure**: Create a one-sentence summary with two blanks.
+4. **Blank Format - CRITICAL**: You MUST use exactly this format for blanks:
+   - First blank: \`(A) ____________________\` (Long underline after (A))
+   - Second blank: \`(B) ____________________\` (Long underline after (B))
+5. **Option Pairing**: Create 5 pairs of (A) - (B).
+Format: [{"type":"요약문", "question":"다음 글의 내용을 한 문장으로 요약하고자 한다. 빈칸 (A), (B)에 들어갈 말로 가장 적절한 것은?", "options":["(A) word - (B) word", ...], "answer_index":1, "explanation":"...", "summary_text":"(ENGLISH Summary Sentence with (A) and (B) blanks included...)"}]
 Text: {text}`
 };
 
@@ -565,9 +572,19 @@ function renderCardResult(index, originalText, questions, globalType) {
         if (q.modified_text) questionBody = q.modified_text;
         if (q.box) questionBody = `<div style="border:1px solid #000; padding:10px; margin-bottom:15px; font-weight:500;">${q.box}</div>` + (q.A ? `(A) ${q.A}<br><br>(B) ${q.B}<br><br>(C) ${q.C}` : questionBody);
         if (q.summary_text) {
-            // Add Arrow for Summary
-            questionBody = `<div style="text-align:center; font-size:20px; font-weight:bold; margin-bottom:5px;">↓</div>` +
-                `<div style="border:1px solid #000; padding:10px; margin-bottom:15px; font-weight:500;">${q.summary_text}</div>`;
+            // --- Summary Type Special Rendering ---
+            // 1. Passage Box
+            questionBody = `<div style="border:1px solid #000; padding:12px; margin-bottom:15px; font-family:'Times New Roman', serif; text-align:justify; line-height:1.5;">${originalText}</div>`;
+            // 2. Arrow
+            questionBody += `<div style="text-align:center; margin-bottom:15px; font-size:24px; font-weight:bold;">↓</div>`;
+
+            // 3. Summary Box
+            // Wrap blanks in inline-block to prevent splitting and ensure they move to next line if space is tight
+            let processedSummary = q.summary_text
+                .replace(/(\(A\)\s*_+)/g, '<span style="display:inline-block; font-weight:bold;">$1</span>')
+                .replace(/(\(B\)\s*_+)/g, '<span style="display:inline-block; font-weight:bold;">$1</span>');
+
+            questionBody += `<div style="border:1px solid #000; padding:15px; margin-bottom:20px; font-weight:500; font-family:'Times New Roman', serif; line-height:1.6; text-align:justify;">${processedSummary}</div>`;
         }
 
         // Correctly handle implicit or explicit blank types
@@ -582,24 +599,94 @@ function renderCardResult(index, originalText, questions, globalType) {
         const qNum = document.querySelectorAll('.question-card').length + 1; // Global Question Number
 
         // Question HTML: ONLY contents, no hidden answers
+        let optionsHtml = '';
+
+        if (qType === '요약문' || qType === 'summary') {
+            // Special Options Layout for Summary (CSAT Style)
+            optionsHtml = `
+            <div style="margin-top:20px; width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <!-- Headers (A) and (B) -->
+                <div style="display: flex; width: 100%; align-items: center; margin-bottom: 8px; font-weight: bold; font-family: 'Times New Roman', serif;">
+                    <!-- Spacer for Number column to align perfectly -->
+                    <div style="width: 30px;"></div>
+                    <!-- Header Columns -->
+                    <div style="flex: 1; display: flex; justify-content: space-between;">
+                        <div style="width: 45%; text-align: center;">(A)</div>
+                        <div style="width: 10%; text-align: center;"></div>
+                        <div style="width: 45%; text-align: center;">(B)</div>
+                    </div>
+                </div>
+
+                <!-- Option Rows -->
+                <div style="width: 100%; display: flex; flex-direction: column; gap: 6px;">
+                    ${q.options.map((o, k) => {
+                // Parse (A) ... (B) ...
+                let parts = o.split(/[-–]/);
+                let aVal = parts[0] ? parts[0].replace(/\(A\)/i, '').trim() : "";
+                let bVal = parts[1] ? parts[1].replace(/\(B\)/i, '').trim() : "";
+
+                // Cleanup
+                aVal = aVal.replace(/^[\(]?\d+[\)\.]?/, '').trim();
+
+                const num = ['①', '②', '③', '④', '⑤'][k] || (k + 1);
+
+                return `
+                        <div style="display: flex; align-items: center; width: 100%;">
+                            <!-- Number -->
+                            <div style="width: 30px; font-family: 'Pretendard', sans-serif;">${num}</div>
+                            
+                            <!-- Content Wrapper -->
+                            <div style="flex: 1; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="width: 45%; text-align: left; padding-left: 15%; box-sizing: border-box; font-family: 'Times New Roman', serif;">${aVal}</div>
+                                <div style="width: 10%; text-align: center; color: #999; font-size: 10px; letter-spacing: -1px;">……</div>
+                                <div style="width: 45%; text-align: left; padding-left: 15%; box-sizing: border-box; font-family: 'Times New Roman', serif;">${bVal}</div>
+                            </div>
+                        </div>`;
+            }).join('')}
+                </div>
+            </div>`;
+        } else if (qType !== '어법' && qType !== '어휘' && qType !== 'grammar' && qType !== 'vocabulary') {
+            // Default Options Layout
+            optionsHtml = `
+            <div class="options-list" style="display:grid; grid-template-columns:1fr; gap:6px; font-size:15px;">
+                ${q.options.map((o, k) => {
+                // Start Clean
+                let cleanOption = o;
+
+                // ONLY clean common numbering (1), 1. IF it's NOT a Sequence question where (A), (B) is vital
+                // Sequence questions start with (A), (B), (C) which matches the generic cleaner regex.
+                // We must protect them.
+                if (qType === '글의 순서' || qType === 'sequence') {
+                    // For sequence, just strip ① part if it exists, but usually we just want the text
+                    // The prompt guarantees (A) - (C) - (B) format.
+                    // Just strip leading ①②③④⑤ or (1) if they managed to sneak in.
+                    cleanOption = o.replace(/^[\(]?[0-9]+[\)\.]?|[①-⑮]|\s*/, '').trim();
+                    // If that stripped too much (e.g. the prompt didn't include numbers), it's fine.
+                    // But wait, our regex `\(?[A-E]\)` was the culprit. We just avoid that one.
+                    cleanOption = o.replace(/^(\(?[0-9]+\)|[①-⑮])\.?\s*/, '');
+                } else {
+                    // Default aggressive cleaner for other types
+                    cleanOption = o.replace(/^(\(?[0-9]+\)|[①-⑮]|\(?[A-E]\))\.?\s*/i, '');
+                }
+
+                return `<div>${['①', '②', '③', '④', '⑤'][k] || (k + 1)} ${cleanOption}</div>`;
+            }).join('')}
+            </div>`;
+        }
+
         const questionHtml = `
             <div class="question-card">
                 <div style="font-family:'Pretendard'; font-size:16px; font-weight:700; color:#000; margin-bottom:12px;">
                     <span style="font-size:18px;">${qNum}.</span> ${q.question || "다음 물음에 답하시오."}
                 </div>
                 
-                ${qType !== '글의 순서' && qType !== '문장 넣기' && qType !== '요약문' && !q.box ? `<div style="font-family:'Times New Roman'; font-size:16px; line-height:1.6; margin-bottom:15px; text-align:justify;">${questionBody}</div>` : ''}
-                ${qType === '글의 순서' ? `<div style="font-family:'Times New Roman'; font-size:16px; margin-bottom:15px;">${questionBody}</div>` : ''}
-                 ${q.box && qType !== '글의 순서' ? `<div style="font-family:'Times New Roman'; font-size:16px; margin-bottom:15px;">${questionBody}</div>` : ''}
+                ${qType !== '글의 순서' && qType !== '문장 넣기' && qType !== '요약문' && qType !== 'summary' && !q.box ? `<div style="font-family:'Times New Roman'; font-size:16px; line-height:1.6; margin-bottom:15px; text-align:justify;">${questionBody}</div>` : ''}
+                ${qType === '글의 순서' || qType === '문장 넣기' ? `<div style="font-family:'Times New Roman'; font-size:16px; margin-bottom:15px;">${questionBody}</div>` : ''}
+                ${qType === '요약문' || qType === 'summary' ? `<div>${questionBody}</div>` : ''}
                 
-                ${(qType !== '어법' && qType !== '어휘' && qType !== 'grammar' && qType !== 'vocabulary') ?
-                `<div class="options-list" style="display:grid; grid-template-columns:1fr; gap:6px; font-size:15px;">
-                    ${q.options.map((o, k) => {
-                    // Strip existing numbering patterns like (1), 1., ①
-                    const cleanOption = o.replace(/^(\(?[0-9]+\)|[①-⑮]|\(?[A-E]\))\.?\s*/i, '');
-                    return `<div>${['①', '②', '③', '④', '⑤'][k] || (k + 1)} ${cleanOption}</div>`;
-                }).join('')}
-                </div>` : ''}
+                 ${q.box && qType !== '글의 순서' && qType !== '요약문' && qType !== 'summary' ? `<div style="font-family:'Times New Roman'; font-size:16px; margin-bottom:15px;">${questionBody}</div>` : ''}
+                
+                ${optionsHtml}
             </div>
         `;
         examLayout.innerHTML += questionHtml;
@@ -755,5 +842,328 @@ ${answerContent}
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `Exam_Paper_${new Date().toISOString().slice(0, 10)}.html`;
+    link.click();
+}
+
+// --- Mode Switcher Logic ---
+function switchMode(mode) {
+    const csatBtn = document.getElementById('btn-mode-csat');
+    const writingBtn = document.getElementById('btn-mode-writing');
+    const csatSidebar = document.getElementById('sidebar-csat-content');
+    const writingSidebar = document.getElementById('sidebar-writing-content');
+
+    if (mode === 'csat') {
+        csatBtn.classList.add('active');
+        writingBtn.classList.remove('active');
+        // Button style update
+        csatBtn.style.background = '#fff';
+        csatBtn.style.color = '#1e293b';
+        writingBtn.style.background = '#f1f5f9';
+        writingBtn.style.color = '#94a3b8';
+
+        csatSidebar.style.display = 'block';
+        writingSidebar.style.display = 'none';
+    } else {
+        writingBtn.classList.add('active');
+        csatBtn.classList.remove('active');
+        // Button style update
+        writingBtn.style.background = '#fff';
+        writingBtn.style.color = '#1e293b';
+        csatBtn.style.background = '#f1f5f9';
+        csatBtn.style.color = '#94a3b8';
+
+        writingSidebar.style.display = 'block';
+        csatSidebar.style.display = 'none';
+    }
+}
+
+// --- Writing Test Generator Logic ---
+async function runAI_Writing() {
+    // 0. Input Validation
+    const textareas = document.querySelectorAll('.source-textarea');
+    const titleInputs = document.querySelectorAll('.passage-title-input');
+
+    let combinedSourceText = "";
+    let validCount = 0;
+
+    textareas.forEach((area, idx) => {
+        const text = area.value.trim();
+        const title = titleInputs[idx].value.trim() || `Passage ${idx + 1}`;
+        if (text) {
+            combinedSourceText += `\n[${title}]\n${text}\n\n`;
+            validCount++;
+        }
+    });
+
+    if (validCount === 0) {
+        alert("지문을 먼저 입력해주세요.");
+        return;
+    }
+
+    let apiKey = localStorage.getItem("gemini_api_key");
+    if (!apiKey) {
+        alert("API 키가 필요합니다. 설정 메뉴에서 등록해주세요.");
+        return;
+    }
+
+    // 1. Get Settings
+    const examTitle = document.getElementById('exam-title-input').value || "2026학년도 1학기 중간고사 대비";
+    const examSubtitle = document.getElementById('exam-subtitle-input').value || "영어 교과서 서술형 대비";
+    const difficulty = document.getElementById('writing-difficulty').value;
+
+    const checkedBoxes = document.querySelectorAll('input[name="wtype"]:checked');
+    const targetTypes = Array.from(checkedBoxes).map(cb => cb.value);
+
+    // 2. Prepare UI
+    const loading = document.getElementById('loading');
+    const statusText = document.getElementById('statusText');
+    const resultsContainer = document.getElementById('results-container');
+    const emptyMsg = document.getElementById('empty-results-msg');
+
+    if (targetTypes.length === 0) {
+        alert("생성할 문제 유형을 최소 1개 이상 선택해주세요.");
+        return;
+    }
+
+    resultsContainer.innerHTML = "";
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    if (loading) loading.style.display = 'block';
+    statusText.innerText = `서술형 문제 생성 중... (모델: ${activeModel})`;
+
+    // 3. Construct Prompt
+    const typeInstructions = [];
+
+    targetTypes.forEach(qType => {
+        if (qType.includes("단순 배열")) {
+            typeInstructions.push(`
+            ### Type: 단순 배열 영작
+            - **CRITICAL:** You must MODIFY the **Source Text**.
+              1. Select a key sentence.
+              2. **MARKER RULE:** Label it \`(가)\` or \`(나)\` and wrap with \`<u>...</u>\`.
+            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, 괄호 안의 단어를 모두 사용하여 배열하시오."
+            - Content:
+              1. Korean: [Translation]
+              2. Words: ( [scrambled words] )
+            `);
+        } else if (qType.includes("변형 배열")) {
+            typeInstructions.push(`
+            ### Type: 변형 배열 영작 (어형 변화)
+            - **CRITICAL:** MODIFY Source Text with \`(가)\` or \`(나)\` + \`<u>...</u>\`.
+            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, 괄호 안의 단어를 알맞게 변형하여 배열하시오."
+            - Content:
+              1. Korean: [Translation]
+              2. Words: ( [scrambled words, some in root form] )
+            `);
+        } else if (qType.includes("조건 영작")) {
+            typeInstructions.push(`
+            ### Type: 조건 영작
+            - **CRITICAL:** MODIFY Source Text with \`(가)\` or \`(나)\` + \`<u>...</u>\`.
+            - **Question Header:** "다음 글의 밑줄 친 (나)를 <보기>의 조건에 맞게 영작하시오."
+            - **Condition Box:** Use \`<ul><li>...</li></ul>\` (e.g., Use 'not only', change form).
+            `);
+        } else if (qType.includes("요약문 빈칸")) {
+            typeInstructions.push(`
+            ### Type: 요약문 빈칸 완성
+            - **Task:** Create a summary paragraph.
+            - **MARKER RULE:** NO markers in text for this type.
+            - **Question Header:** "다음 글의 내용을 한 문장으로 요약하고자 한다. 빈칸 (A), (B)에 들어갈 말로 적절한 것은?"
+            - **Output:** Summary text with blanks \`(A) __________\`, \`(B) __________\`.
+            `);
+        } else if (qType.includes("문장 전환")) {
+            typeInstructions.push(`
+            ### Type: 문장 전환
+            - **CRITICAL:** MODIFY Source Text with \`(a)\` or \`(b)\` + \`<u>...</u>\`.
+            - **Question Header:** "다음 글의 밑줄 친 (a)를 같은 의미의 문장으로 전환할 때 빈칸을 채우시오."
+            - **Output:** Provide target sentence structure with blanks.
+            `);
+        } else if (qType.includes("밑줄 고쳐 쓰기")) {
+            typeInstructions.push(`
+            ### Type: 어법 수정 (밑줄 고쳐 쓰기)
+            - **CRITICAL:** MODIFY Source Text.
+              - Select 5 parts labeled \`(A)~(E)\` with \`<u>...</u>\`.
+              - One error among them.
+            - **Question Header:** "다음 글의 밑줄 친 (A)~(E) 중 어법상 틀린 것을 찾아 고쳐 쓰시오."
+            `);
+        } else if (qType.includes("양자택일형")) {
+            typeInstructions.push(`
+            ### Type: 어법 (양자택일)
+            - **CRITICAL:** MODIFY Source Text.
+              - Create 3 parts like \`(A) [is / are]\`.
+            - **Question Header:** "다음 글의 괄호 (A), (B), (C) 안에서 어법에 맞는 표현을 고르시오."
+            `);
+        } else if (qType.includes("밑줄 없이 찾기")) {
+            typeInstructions.push(`
+            ### Type: 어법 (밑줄 없음)
+            - **CRITICAL:** MODIFY Source Text to have 3 errors, NO underlines.
+            - **Question Header:** "다음 글에서 어법상 틀린 곳을 3군데 찾아 바르게 고치시오."
+            `);
+        } else if (qType.includes("오류 이유 서술형")) {
+            typeInstructions.push(`
+            ### Type: 어법 (이유 서술)
+            - **CRITICAL:** MODIFY Source Text with \`(A)~(E)\` + \`<u>...</u>\`. One error.
+            - **Question Header:** "틀린 것을 찾아 고치고, 그 이유를 설명하시오."
+            - **Answer Space:** Add \`Reason: ____________________\`.
+            `);
+        } else if (qType.includes("우리말 해석")) {
+            typeInstructions.push(`
+            ### Type: 우리말 해석
+            - **CRITICAL:** MODIFY Source Text.
+              - Label target with \`㉠\` or \`㉡\` + \`<u>...</u>\`.
+            - **Question Header:** "밑줄 친 ㉠을 우리말로 정확히 해석하시오."
+            `);
+        } else if (qType.includes("함축 의미 추론")) {
+            typeInstructions.push(`
+            ### Type: 함축 의미 추론
+            - **CRITICAL:** MODIFY Source Text.
+              - Label target with \`㉠\` or \`㉡\` + \`<u>...</u>\`.
+            - **Question Header:** "밑줄 친 ㉡이 문맥상 의미하는 바로 가장 적절한 것은?"
+            `);
+        }
+    });
+
+    const prompt = `
+    # Role & Objective
+    You are an expert AI specialized in creation "Korean High School English Internal Exams (Naesin)".
+    Your goal is to transform the user's input English text into a high-quality "Short-Answer Variation Problem Set" (서답형 변형문제).
+    
+    [UPDATED TASK INSTRUCTION]
+    Target Level: ${difficulty}
+    Exam Title: ${examTitle}
+    Exam Subtitle: ${examSubtitle}
+    
+    GENERATE ONLY THE FOLLOWING ${targetTypes.length} QUESTIONS:
+    ${typeInstructions.join('\n')}
+
+    [MULTI_PASSAGE HANDLING]
+    - The user provided MULTIPLE passages. The input text contains headers like \`[Title]\`.
+    - **Separation Rule:** Do NOT mix contents of different passages in a single question.
+    - **Context Awareness:** clearly understand which passage each question belongs to.
+    - Keep questions balanced across the provided passages.
+
+    Source Text:
+    ${combinedSourceText}
+
+    [DESIGN & LAYOUT SPECIFICATIONS - CRITICAL]
+    You must generate a COMPLETE HTML document starting with \`<!DOCTYPE html>\`.
+    
+    1. **Page Layout (B4 Size & 2-Column):**
+       - Use the following CSS in \`<style>\`:
+         @page { size: B4 portrait; margin: 20mm; }
+         body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; line-height: 1.6; padding: 20px; background-color: #ffffff !important; color: #000000 !important; }
+         .page-container { width: 100%; box-sizing: border-box; background-color: #ffffff !important; }
+         .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 2px solid #000; background-color: #ffffff; }
+         .answer-line { display: block; width: 100%; border-bottom: 1px solid #000; margin-top: 40px; margin-bottom: 20px; height: 30px; }
+         .footer { text-align: center; font-size: 10px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
+         .answer-key-section { page-break-before: always; display: block; margin-top: 50px; border-top: 2px dashed #000; padding-top: 20px; background-color: #ffffff; }
+         .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; font-weight: bold; color: rgba(0, 0, 0, 0.08); white-space: nowrap; z-index: 0; pointer-events: none; user-select: none; font-family: 'Helvetica', sans-serif; }
+         .content-wrapper { position: relative; z-index: 10; column-count: 2; column-gap: 15mm; column-rule: 0.5px solid #ccc; text-align: justify; }
+         .question-box { break-inside: avoid; margin-bottom: 60px; background-color: #ffffff; }
+         ul { list-style-type: none; padding-left: 0; }
+         li { margin-bottom: 5px; }
+
+    2. **Editable Capability:**
+       - **CRITICAL:** Add \`contenteditable="true"\` to the \`<body>\` tag.
+
+    3. **Structure & Instruction:**
+       - **Watermark:** Immediately inside \`<body>\`, add \`<div class="watermark">Top English Academy</div>\`.
+       - **Header:** Insert the Title and Student Info Table at the very top. Use "${examTitle}" and "${examSubtitle}".
+       - **Main Instruction:** Immediately after the header, add: \`<h3><b>※ 다음 글을 읽고 물음에 답하시오.</b></h3>\`
+       - **NO LABELS:** Do NOT add headers like \`[Passage]\` before the text.
+       - **Body:** Wrap all the questions and reading passages inside \`<div class="content-wrapper">\`.
+       - **Question Format:** Inside each \`.question-box\`, proivde the question text first, then add \`<div class="answer-line"></div>\` for the student to write the answer.
+       - **Footer:** Insert the Branding Footer at the very bottom.
+       - **Answer Key:** Place the Answer Key at the very end of the document, OUTSIDE the \`.content-wrapper\`, wrapped in \`<div class="answer-key-section">\`.
+
+    4. **Header HTML (Student Info):**
+       <table class="header-table">
+           <tr style="height: 40px;">
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Date</td>
+               <td style="width: 35%; border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Score</td>
+               <td style="width: 35%; border-bottom: 1px solid #000;"> &nbsp; / 100</td>
+           </tr>
+           <tr style="height: 40px;">
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Class</td>
+               <td style="width: 35%; border-right: 1px solid #000;"></td>
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Name</td>
+               <td style="width: 35%;"></td>
+           </tr>
+       </table>
+
+    [OUTPUT FORMAT]
+    Output ONLY the RAW HTML Code (Full design with B4 size, 2 columns, Editable body, and separated Answer Key). 
+    Do not output markdown code blocks. Just start with <!.
+    `;
+
+    // 4. API Call
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            })
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+        const data = await response.json();
+
+        if (!data.candidates || !data.candidates[0].content) {
+            throw new Error("결과 생성 실패 (Safety Block 등)");
+        }
+
+        let rawHtml = data.candidates[0].content.parts[0].text;
+
+        // Cleanup HTML string
+        rawHtml = rawHtml.replace(/```html|```/g, "").trim();
+
+        // Render Result
+        renderWritingResult(rawHtml);
+
+    } catch (e) {
+        alert("오류 발생: " + e.message);
+        console.error(e);
+    } finally {
+        if (loading) loading.style.display = 'none';
+        statusText.innerText = "문제 생성 완료";
+    }
+}
+
+function renderWritingResult(htmlContent) {
+    const container = document.getElementById('results-container');
+    container.innerHTML = `
+        <div style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-size:18px; color:#1e293b;"><i class="fas fa-check-circle" style="color:#10b981;"></i> 서술형 시험지 생성 완료</h3>
+                <button onclick="downloadWritingHTML()" style="background:#2563eb; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer;">
+                    <i class="fas fa-download"></i> 다운로드 (.html)
+                </button>
+            </div>
+            <div style="width:100%; height:800px; border:1px solid #ddd; border-radius:8px; overflow:hidden;">
+                <iframe id="preview-frame" style="width:100%; height:100%; border:none; background:#fff;"></iframe>
+            </div>
+        </div>
+    `;
+
+    // Store global for download
+    window.lastGeneratedHTML = htmlContent;
+
+    // Inject into iframe
+    const iframe = document.getElementById('preview-frame');
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+}
+
+function downloadWritingHTML() {
+    if (!window.lastGeneratedHTML) return;
+    const blob = new Blob([window.lastGeneratedHTML], { type: 'text/html' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Writing_Exam_${new Date().toISOString().slice(0, 10)}.html`;
     link.click();
 }
