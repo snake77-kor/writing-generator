@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top English Academy 변형문제</title>
+    <title>Top English Academy 내신 서술형 변형문제</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <!-- PDF.js CDN -->
@@ -17,7 +17,8 @@
 <body>
 
     <header>
-        <div class="logo"><i class="fas fa-graduation-cap"></i> Top English Academy <span class="badge">변형문제</span>
+        <div class="logo"><i class="fas fa-graduation-cap"></i> Top English Academy <span class="badge">내신 서술형 전용
+                앱</span>
         </div>
         <div style="flex:1;"></div>
     </header>
@@ -28,127 +29,69 @@
             style="width:260px; border-right:1px solid #eee; padding:20px; background:#fff; flex-shrink:0; display:flex; flex-direction:column;">
 
             <div style="flex:1; overflow-y:auto;">
-                <!-- Mode Switcher -->
-                <div class="mode-switch-container" style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #e2e8f0;">
-                    <div style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px;">생성 모드 선택</div>
-                    <div style="display: flex; gap: 5px; justify-content: center;">
-                        <button id="btn-mode-csat" class="mode-btn active" onclick="switchMode('csat')" style="flex:1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: #fff; color: #1e293b;">수능형</button>
-                        <button id="btn-mode-writing" class="mode-btn" onclick="switchMode('writing')" style="flex:1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; background: #f1f5f9; color: #94a3b8;">내신/서술형</button>
-                    </div>
-                </div>
-
-                <!-- CSAT MODE SIDEBAR CONTENT -->
-                <div id="sidebar-csat-content">
+                <!-- WRITING MODE SIDEBAR CONTENT -->
+                <div id="sidebar-writing-content" style="display: block;">
                     <div class="sidebar-group" style="margin-bottom:25px;">
-                        <!-- Generate All Button -->
-                        <button class="generate-all-btn" onclick="runAI('all')">
-                            <i class="fas fa-layer-group"></i> 전체 문제 일괄 생성
-                        </button>
-
-                        <!-- Divider -->
-                        <div style="text-align:center; margin: 15px 0;">
-                            <span style="font-size:11px; color:#bbb; background:#fff; padding:0 10px;">개별 선택 생성</span>
-                        </div>
-
-                        <!-- Generate Selected Button -->
-                        <button class="generate-selected-btn" onclick="runAI('selected')">
-                            <i class="fas fa-check-double"></i> 선택한 문제만 생성
-                        </button>
-                        <label
-                            style="font-size:12px; color:#888; display:block; text-align:center; margin-top:8px; cursor:pointer;">
-                            <input type="checkbox" onchange="toggleAll(this)" style="vertical-align:middle;"> 전체 선택/해제
-                        </label>
-                    </div>
-
-                    <div class="sidebar-group" style="margin-bottom:25px;">
-                        <div class="group-title">Part 1. 대의 파악</div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-purpose" value="purpose"
-                                name="qtype"><label for="c-purpose">글의 목적</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-mood" value="mood"
-                                name="qtype"><label for="c-mood">심경 변화</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-claim" value="claim"
-                                name="qtype"><label for="c-claim">글의 주장</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-underlying" value="underlying"
-                                name="qtype"><label for="c-underlying">함축 의미</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-gist" value="gist"
-                                name="qtype"><label for="c-gist">글의 요지</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-topic" value="topic"
-                                name="qtype"><label for="c-topic">글의 주제</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-title" value="title"
-                                name="qtype"><label for="c-title">글의 제목</label></div>
-                    </div>
-
-                    <div class="sidebar-group" style="margin-bottom:25px;">
-                        <div class="group-title">Part 2. 어법/어휘</div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-grammar" value="grammar"
-                                name="qtype"><label for="c-grammar">어법</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-vocabulary" value="vocabulary"
-                                name="qtype"><label for="c-vocabulary">어휘</label></div>
-                    </div>
-
-                    <div class="sidebar-group" style="margin-bottom:25px;">
-                        <div class="group-title">Part 3. 논리/빈칸</div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-blank" value="blank"
-                                name="qtype"><label for="c-blank">빈칸 추론</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-irrelevant" value="irrelevant"
-                                name="qtype"><label for="c-irrelevant">무관한 문장</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-sequence" value="sequence"
-                                name="qtype"><label for="c-sequence">글의 순서</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-insertion" value="insertion"
-                                name="qtype"><label for="c-insertion">문장 넣기</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" id="c-summary" value="summary"
-                                name="qtype"><label for="c-summary">요약문</label></div>
-                    </div>
-                </div>
-
-                <!-- WRITING MODE SIDEBAR CONTENT (Hidden by default) -->
-                <div id="sidebar-writing-content" style="display: none;">
-                    <div class="sidebar-group" style="margin-bottom:25px;">
-                         <button class="generate-all-btn" onclick="runAI_Writing()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <button class="generate-all-btn" onclick="runAI_Writing()"
+                            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                             <i class="fas fa-pencil-alt"></i> 서술형 시험지 생성
                         </button>
                     </div>
 
                     <div class="sidebar-group" style="margin-bottom:25px;">
                         <div class="group-title">난이도 설정</div>
-                        <select id="writing-difficulty" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; margin-bottom:10px;">
+                        <select id="writing-difficulty"
+                            style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; margin-bottom:10px;">
                             <option value="상 (Advanced)">상 (Advanced)</option>
                             <option value="중 (Intermediate)" selected>중 (Intermediate)</option>
                             <option value="하 (Basic)">하 (Basic)</option>
                         </select>
-                        
+
                         <div class="group-title" style="margin-top:10px;">시험지 정보</div>
-                         <input type="text" id="exam-title-input" placeholder="시험 제목 (예: 2026 1학기 중간)" value="2026학년도 1학기 중간고사 대비" 
-                                style="width:100%; padding:6px; font-size:12px; border:1px solid #eee; margin-bottom:5px;">
-                         <input type="text" id="exam-subtitle-input" placeholder="부제 (예: 영어 교과서 3과)" value="영어 교과서 서술형 대비" 
-                                style="width:100%; padding:6px; font-size:12px; border:1px solid #eee;">
+                        <input type="text" id="exam-title-input" placeholder="시험 제목 (예: 2026 1학기 중간)"
+                            value="2026학년도 1학기 중간고사 대비"
+                            style="width:100%; padding:6px; font-size:12px; border:1px solid #eee; margin-bottom:5px;">
+                        <input type="text" id="exam-subtitle-input" placeholder="부제 (예: 영어 교과서 3과)"
+                            value="영어 교과서 서술형 대비"
+                            style="width:100%; padding:6px; font-size:12px; border:1px solid #eee;">
                     </div>
 
                     <div class="sidebar-group" style="margin-bottom:15px;">
                         <div class="group-title">1. 영작/배열 (가)</div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="단순 배열" name="wtype" checked><label>단순 배열 (재배열)</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="변형 배열" name="wtype"><label>변형 배열 (어형변화)</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="조건 영작" name="wtype"><label>조건 영작</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="단순 배열" name="wtype"
+                                checked><label>단순 배열 (재배열)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="변형 배열" name="wtype"><label>변형
+                                배열 (어형변화)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="조건 영작" name="wtype"><label>조건
+                                영작</label></div>
                     </div>
 
                     <div class="sidebar-group" style="margin-bottom:15px;">
                         <div class="group-title">2. 문장 완성/전환 (a)</div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="요약문 빈칸" name="wtype" checked><label>요약문 빈칸 완성</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="문장 전환" name="wtype"><label>문장 전환 (복문↔단문)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="요약문 빈칸" name="wtype"
+                                checked><label>요약문 빈칸 완성</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="문장 전환" name="wtype"><label>문장
+                                전환 (복문↔단문)</label></div>
                     </div>
 
                     <div class="sidebar-group" style="margin-bottom:15px;">
                         <div class="group-title">3. 어법 수정 (A)</div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="밑줄 고쳐 쓰기" name="wtype" checked><label>밑줄 고쳐 쓰기</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="양자택일형" name="wtype"><label>양자택일형</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="밑줄 없이 찾기" name="wtype"><label>밑줄 없이 찾기</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="오류 이유 서술형" name="wtype"><label>오류 이유 서술형</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="밑줄 고쳐 쓰기" name="wtype"
+                                checked><label>밑줄 고쳐 쓰기</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="양자택일형"
+                                name="wtype"><label>양자택일형</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="밑줄 없이 찾기"
+                                name="wtype"><label>밑줄 없이 찾기</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="오류 이유 서술형"
+                                name="wtype"><label>오류 이유 서술형</label></div>
                     </div>
 
-                     <div class="sidebar-group" style="margin-bottom:25px;">
+                    <div class="sidebar-group" style="margin-bottom:25px;">
                         <div class="group-title">4. 의미/논술 ㉠</div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="우리말 해석" name="wtype" checked><label>우리말 해석</label></div>
-                        <div class="sidebar-checkbox-item"><input type="checkbox" value="함축 의미 추론" name="wtype"><label>함축 의미 추론</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="우리말 해석" name="wtype"
+                                checked><label>우리말 해석</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" value="함축 의미 추론"
+                                name="wtype"><label>함축 의미 추론</label></div>
                     </div>
                 </div>
             </div>
@@ -208,8 +151,6 @@
             <div id="section-results">
                 <div class="control-header"
                     style="padding:0; background:transparent; border:none; margin-bottom:20px; align-items:center;">
-                    <button class="icon-btn" title="HTML로 저장" onclick="saveAsHTML()" style="margin-left:auto;"><i
-                            class="fas fa-save"></i> 저장</button>
                 </div>
 
                 <div id="loading" class="loader">
@@ -222,7 +163,7 @@
                 <div id="empty-results-msg" style="text-align:center; padding:60px 0; color:#a0a3bd;">
                     <i class="fas fa-check-square" style="font-size:24px; margin-bottom:15px; opacity:0.5;"></i><br>
                     왼쪽 사이드바에서 <b>원하는 유형을 체크</b>하고<br>
-                    <b>[선택한 문제 생성하기]</b> 버튼을 눌러주세요.
+                    <b>[서술형 시험지 생성]</b> 버튼을 눌러주세요.
                 </div>
             </div>
 
