@@ -267,8 +267,15 @@ async function runAI_Writing() {
     const examSubtitle = document.getElementById('exam-subtitle-input').value || "영어 교과서 서술형 대비";
     const difficulty = document.getElementById('writing-difficulty').value;
 
-    const checkedBoxes = document.querySelectorAll('input[name="wtype"]:checked');
-    const targetTypes = Array.from(checkedBoxes).map(cb => cb.value);
+    const isAutoRecommend = document.getElementById('ai-auto-recommend') && document.getElementById('ai-auto-recommend').checked;
+
+    let targetTypes = [];
+    if (isAutoRecommend) {
+        targetTypes = ["단순 배열", "변형 배열", "조건 영작", "요약문 빈칸", "문장 전환", "밑줄 고쳐 쓰기", "양자택일형", "밑줄 없이 찾기", "오류 이유 서술형", "우리말 해석", "함축 의미 추론"];
+    } else {
+        const checkedBoxes = document.querySelectorAll('input[name="wtype"]:checked');
+        targetTypes = Array.from(checkedBoxes).map(cb => cb.value);
+    }
 
     // 2. Prepare UI
     const loading = document.getElementById('loading');
@@ -292,87 +299,110 @@ async function runAI_Writing() {
     targetTypes.forEach(qType => {
         if (qType.includes("단순 배열")) {
             typeInstructions.push(`
-            ### Type: 단순 배열 영작
+            ### Type: 1. 단어 배열 및 조건 영작 (Word Arrangement & Conditional Writing) - 단순 배열
+            - **Target Selection:** 특수 구문(도치, 강조, 가정법, the 비교급 등)이나 명사절(간접의문문 등)이 포함된 핵심 문장을 타깃으로 설정하세요.
             - **CRITICAL:** You must MODIFY the **Source Text**.
               1. Select a key sentence.
-              2. **MARKER RULE:** Label it \`(가)\` or \`(나)\` and wrap with \`<u>...</u>\`.
-            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, 괄호 안의 단어를 모두 사용하여 배열하시오."
+              2. **MARKER RULE:** Delete the English words and replace them with a continuous blank underline (\`_\`) that is EXACTLY as long as the original sentence. Put \`(가)\` in the middle (e.g., \`__________________ (가) __________________.\`). **Keep the original period(.) at the end. DO NOT show any original English words.**
+            - **Difficulty Strategy:** 실제 고난도 내신 문제처럼 문맥에 맞지 않는 '함정 단어(Dummy Word)'를 1~2개 섞어서 제공하여 난이도를 높이세요.
+            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, 괄호 안의 단어를 모두 사용하여 배열하시오. (필요시 단어를 추가/배제하시오)"
             - Content:
-              1. Korean: [Translation]
-              2. Words: ( [scrambled words] )
+              - [우리말 해석]: <Korean translation of the sentence>
+              - [단어]: ( <scrambled words including dummy words> )
             `);
         } else if (qType.includes("변형 배열")) {
             typeInstructions.push(`
-            ### Type: 변형 배열 영작 (어형 변화)
-            - **CRITICAL:** MODIFY Source Text with \`(가)\` or \`(나)\` + \`<u>...</u>\`.
+            ### Type: 1. 단어 배열 및 조건 영작 - 변형 배열 (어형 변화)
+            - **Target Selection:** 특수 구문(도치, 강조, 가정법 등)이 포함된 핵심 문장.
+            - **CRITICAL:** You must MODIFY the **Source Text**.
+              1. Select a key sentence.
+              2. **MARKER RULE:** Delete the English words and replace them with a continuous blank underline (\`_\`) that is EXACTLY as long as the original sentence. Put \`(가)\` in the middle (e.g., \`__________________ (가) __________________.\`). **Keep the original period(.) at the end. DO NOT show any original English words.**
+            - **Difficulty Strategy:** 단순 배열을 넘어 어형 변화(시제, 수, 태 변형) 조건을 반드시 부여하세요. 함정 단어를 1개 포함하세요.
             - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, 괄호 안의 단어를 알맞게 변형하여 배열하시오."
             - Content:
-              1. Korean: [Translation]
-              2. Words: ( [scrambled words, some in root form] )
+              - [우리말 해석]: <Korean translation of the sentence>
+              - [단어]: ( <scrambled words, mostly in root form> )
             `);
         } else if (qType.includes("조건 영작")) {
             typeInstructions.push(`
-            ### Type: 조건 영작
-            - **CRITICAL:** MODIFY Source Text with \`(가)\` or \`(나)\` + \`<u>...</u>\`.
-            - **Question Header:** "다음 글의 밑줄 친 (나)를 <보기>의 조건에 맞게 영작하시오."
+            ### Type: 1. 단어 배열 및 조건 영작 - 조건 영작
+            - **Target Selection:** 핵심 주제를 담은 문장이나 특수 구문.
+            - **CRITICAL:** You must MODIFY the **Source Text**.
+              1. Select a key sentence.
+              2. **MARKER RULE:** Delete the English words and replace them with a continuous blank underline (\`_\`) that is EXACTLY as long as the original sentence. Put \`(가)\` in the middle (e.g., \`__________________ (가) __________________.\`). **Keep the original period(.) at the end. DO NOT show any original English words.**
+            - **Difficulty Strategy:** 어형 변화 및 단어 추가 조건을 명시하세요.
+            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, <보기>의 조건에 맞게 영작하시오."
             - **Condition Box:** Use \`<ul><li>...</li></ul>\` (e.g., Use 'not only', change form).
+            - Content:
+              - [우리말 해석]: <Korean translation of the sentence>
             `);
         } else if (qType.includes("요약문 빈칸")) {
             typeInstructions.push(`
-            ### Type: 요약문 빈칸 완성
+            ### Type: 3. 요약문 완성 및 주제/제목 쓰기 (Summary & Theme Completion)
             - **Task:** Create a summary paragraph.
+            - **Difficulty Strategy:** 원문의 핵심 키워드를 그대로 쓰지 말고, 유의어(Synonym)로 대체하거나 품사를 변형(예: important → importance)하여 작성하도록 유도하세요. 학생의 어휘력을 평가하기 위해 '주어진 철자로 시작하는 단어'를 조건으로 제시하세요.
             - **MARKER RULE:** NO markers in text for this type.
-            - **Question Header:** "다음 글의 내용을 한 문장으로 요약하고자 한다. 빈칸 (A), (B)에 들어갈 말로 적절한 것은?"
-            - **Output:** Summary text with blanks \`(A) __________\`, \`(B) __________\`.
+            - **Question Header:** "다음 글의 내용을 한 문장으로 요약하고자 한다. 주어진 철자로 시작하는 알맞은 단어를 쓰시오."
+            - **Output:** Summary text with blanks \`(A) t__________\`, \`(B) r__________\`.
             `);
         } else if (qType.includes("문장 전환")) {
             typeInstructions.push(`
-            ### Type: 문장 전환
-            - **CRITICAL:** MODIFY Source Text with \`(a)\` or \`(b)\` + \`<u>...</u>\`.
-            - **Question Header:** "다음 글의 밑줄 친 (a)를 같은 의미의 문장으로 전환할 때 빈칸을 채우시오."
-            - **Output:** Provide target sentence structure with blanks.
+            ### Type: 5. 문장 구조 전환 (Sentence Transformation)
+            - **Target Selection:** 능동태↔수동태 전환, 부사절↔분사구문 전환, 직설법↔가정법 전환, It is ~ that 강조 구문으로의 전환을 타깃으로 삼으세요.
+            - **Difficulty Strategy:** 시제 일치나 주어 일치(독립분사구문 등)에서 함정을 만들어 변별력을 시도하세요.
+            - **CRITICAL:** MODIFY Source Text with \`(a)\` or \`(b)\` + \`<u>...</u>\`. 단, 문장 구조를 전환할 때 원문의 사실 관계(Fact)와 핵심 주제를 절대 왜곡하거나 누락하지 마세요.
+            - **Question Header:** "다음 글의 밑줄 친 (a)를 분사구문(혹은 수동태/강조구문 등)을 활용하여 바꿔 쓰시오."
+            - **Output:** Provide target sentence structure with blanks or lines.
             `);
         } else if (qType.includes("밑줄 고쳐 쓰기")) {
             typeInstructions.push(`
-            ### Type: 어법 수정 (밑줄 고쳐 쓰기)
+            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 밑줄 고쳐 쓰기
+            - **Difficulty Strategy:** 주어와 동사 사이에 긴 수식어구를 배치하여 '수 일치' 함정을 만들거나, 반의어(Antonym)를 배치하여 문맥상 오류를 유도하세요.
             - **CRITICAL:** MODIFY Source Text.
               - Select 5 parts labeled \`(A)~(E)\` with \`<u>...</u>\`.
               - One error among them.
-            - **Question Header:** "다음 글의 밑줄 친 (A)~(E) 중 어법상 틀린 것을 찾아 고쳐 쓰시오."
+            - **Question Header:** "다음 글의 밑줄 친 (A)~(E) 중 어법상 틀린 것을 찾아 바르게 고쳐 쓰시오."
             `);
         } else if (qType.includes("양자택일형")) {
             typeInstructions.push(`
-            ### Type: 어법 (양자택일)
+            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 양자택일형
+            - **Difficulty Strategy:** 수 일치, 능수동, 혹은 반의어가 포함된 괄호를 3개 만드세요.
             - **CRITICAL:** MODIFY Source Text.
               - Create 3 parts like \`(A) [is / are]\`.
-            - **Question Header:** "다음 글의 괄호 (A), (B), (C) 안에서 어법에 맞는 표현을 고르시오."
+            - **Question Header:** "다음 글의 괄호 (A), (B), (C) 안에서 어법/문맥에 맞는 표현을 고르시오."
             `);
         } else if (qType.includes("밑줄 없이 찾기")) {
             typeInstructions.push(`
-            ### Type: 어법 (밑줄 없음)
-            - **CRITICAL:** MODIFY Source Text to have 3 errors, NO underlines.
-            - **Question Header:** "다음 글에서 어법상 틀린 곳을 3군데 찾아 바르게 고치시오."
+            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 밑줄 없이 찾기
+            - **Difficulty Strategy:** 고난도 어법 문항. 틀린 개수를 랜덤하게 명시하거나 명시하지 않도록 변형(예: "모두 찾아", "2군데 찾아" 등).
+            - **CRITICAL:** MODIFY Source Text to have 2~3 errors, NO underlines.
+            - **Question Header:** "다음 글에서 어법 혹은 문맥상 틀린 곳을 모두(혹은 N군데) 찾아 바르게 고치시오."
             `);
         } else if (qType.includes("오류 이유 서술형")) {
             typeInstructions.push(`
-            ### Type: 어법 (이유 서술)
+            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 오류 이유 서술형
+            - **Difficulty Strategy:** 어법 오류를 교정하고 그 문법적 이유까지 서술하게 하는 고난도 문항입니다.
             - **CRITICAL:** MODIFY Source Text with \`(A)~(E)\` + \`<u>...</u>\`. One error.
-            - **Question Header:** "틀린 것을 찾아 고치고, 그 이유를 설명하시오."
-            - **Answer Space:** Add \`Reason: ____________________\`.
+            - **Question Header:** "다음 문장에서 틀린 부분을 찾아 바르게 고치고, 그 이유를 설명하시오."
+            - **Answer Space:** Add \`이유(Reason): ____________________\`.
             `);
         } else if (qType.includes("우리말 해석")) {
             typeInstructions.push(`
-            ### Type: 우리말 해석
+            ### Type: 4. 세부 내용 파악 및 지칭 추론 (Detail & Reference Inference) - 우리말 해석
+            - **Target Selection:** 지문 내의 대명사(it, they, this 등)나 추상적인 명사구(예: this factor)를 타깃으로 설정.
+            - **Difficulty Strategy:** 단어 자체의 번역을 넘어 문맥적/함축적 의미를 지정된 길이(예: "30자 이내", "10-15 단어" 등)로 우리말로 서술하게 하세요.
             - **CRITICAL:** MODIFY Source Text.
               - Label target with \`㉠\` or \`㉡\` + \`<u>...</u>\`.
-            - **Question Header:** "밑줄 친 ㉠을 우리말로 정확히 해석하시오."
+            - **Question Header:** "다음 글의 밑줄 친 ㉠이 가리키는 내용을 본문에서 찾아 <조건>에 맞게 우리말로 서술하시오."
             `);
         } else if (qType.includes("함축 의미 추론")) {
             typeInstructions.push(`
-            ### Type: 함축 의미 추론
+            ### Type: 4. 세부 내용 파악 및 지칭 추론 (Detail & Reference Inference) - 함축 의미 추론
+            - **Target Selection:** 비유적 표현이나 복잡한 구를 타깃으로 설정.
+            - **Difficulty Strategy:** 단순히 대명사가 지칭하는 단어를 찾는 것을 넘어, 글의 문맥적 의미를 조건(12~16단어의 완벽한 영어 문장 등)에 맞게 서술하도록 요구하여 독해력을 측정하세요.
             - **CRITICAL:** MODIFY Source Text.
               - Label target with \`㉠\` or \`㉡\` + \`<u>...</u>\`.
-            - **Question Header:** "밑줄 친 ㉡이 문맥상 의미하는 바로 가장 적절한 것은?"
+            - **Question Header:** "밑줄 친 ㉡의 문맥상 의미를 본문에서 찾아 조건에 맞게 영어로 서술하시오."
             `);
         }
     });
@@ -387,7 +417,9 @@ async function runAI_Writing() {
     Exam Title: ${examTitle}
     Exam Subtitle: ${examSubtitle}
     
-    GENERATE ONLY THE FOLLOWING ${targetTypes.length} QUESTIONS:
+    ${isAutoRecommend
+            ? "**[AUTO RECOMMENDATION MODE]**\\n    Analyze the Source Text carefully and CHOOSE the 2~3 MOST APPROPRIATE question types per passage from the following list.\\n    DO NOT generate all of them. Only pick the best 2~3 types that fit the passage's characteristics.\\n    AVAILABLE TYPES POOL:"
+            : `GENERATE ONLY THE FOLLOWING ${targetTypes.length} QUESTIONS:`}
     ${typeInstructions.join('\n')}
 
     [MULTI_PASSAGE HANDLING]
@@ -395,6 +427,10 @@ async function runAI_Writing() {
     - **Separation Rule:** Do NOT mix contents of different passages in a single question.
     - **Context Awareness:** clearly understand which passage each question belongs to.
     - Keep questions balanced across the provided passages.
+
+    [CRITICAL AI PROMPTING GUIDELINES]
+    - **Scoring Rubric (채점 기준 추가):** 모든 서술형 문항에 대해 구체적인 채점 기준을 제공하세요. (예: "시제나 수 일치 오류 시 -1점 감점", "핵심 단어 'tempted' 누락 시 0점 처리" 등)
+    - **No Hallucination (원문 훼손 금지):** 문장 구조를 전환하거나 요약문을 만들 때 원문의 사실 관계(Fact)와 핵심 주제를 절대 왜곡하거나 누락하지 마세요.
 
     Source Text:
     ${combinedSourceText}
@@ -414,6 +450,7 @@ async function runAI_Writing() {
          .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; font-weight: bold; color: rgba(0, 0, 0, 0.08); white-space: nowrap; z-index: 0; pointer-events: none; user-select: none; font-family: 'Helvetica', sans-serif; }
          .content-wrapper { position: relative; z-index: 10; column-count: 2; column-gap: 15mm; column-rule: 0.5px solid #ccc; text-align: justify; }
          .question-box { break-inside: avoid; margin-bottom: 60px; background-color: #ffffff; }
+         .scoring-rubric { font-size: 0.85em; color: #d97706; background-color: #fffbeb; border-left: 3px solid #f59e0b; padding: 10px; margin-top: 15px; }
          ul { list-style-type: none; padding-left: 0; }
          li { margin-bottom: 5px; }
 
@@ -426,9 +463,15 @@ async function runAI_Writing() {
        - **Main Instruction:** Immediately after the header, add: \`<h3><b>※ 다음 글을 읽고 물음에 답하시오.</b></h3>\`
        - **NO LABELS:** Do NOT add headers like \`[Passage]\` before the text.
        - **Body:** Wrap all the questions and reading passages inside \`<div class="content-wrapper">\`.
-       - **Question Format:** Inside each \`.question-box\`, proivde the question text first, then add \`<div class="answer-line"></div>\` for the student to write the answer.
+       - **Question Format & Output Format Strictness:** 
+         Inside each \`.question-box\`, strictly follow this structure:
+         \`<div class="q-instruction"><b>[Question Header / Instruction]</b></div>\`
+         \`<div class="q-condition"><i>[Condition] (If explicitly requested)</i></div>\`
+         \`<div class="q-passage">[Modified Source Text / Passage]</div>\`
+         \`<div class="q-answer-space"><div class="answer-line"></div></div>\`
        - **Footer:** Insert the Branding Footer at the very bottom.
        - **Answer Key:** Place the Answer Key at the very end of the document, OUTSIDE the \`.content-wrapper\`, wrapped in \`<div class="answer-key-section">\`.
+         - In the Answer Key section, include the **[채점 기준] (Scoring Rubric)** using the \`<div class="scoring-rubric">\` class right below each answer.
 
     4. **Header HTML (Student Info):**
        <table class="header-table">
@@ -447,7 +490,7 @@ async function runAI_Writing() {
        </table>
 
     [OUTPUT FORMAT]
-    Output ONLY the RAW HTML Code (Full design with B4 size, 2 columns, Editable body, and separated Answer Key). 
+    Output ONLY the RAW HTML Code (Full design with B4 size, 2 columns, Editable body, and separated Answer Key with Rubrics). 
     Do not output markdown code blocks. Just start with <!.
     `;
 
