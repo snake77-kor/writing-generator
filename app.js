@@ -592,7 +592,13 @@ function renderWritingResult(htmlContent) {
 
 function downloadWritingHTML() {
     if (!window.lastGeneratedHTML) return;
-    const blob = new Blob([window.lastGeneratedHTML], { type: 'text/html' });
+    
+    let htmlContent = window.lastGeneratedHTML;
+    if (!htmlContent.includes('contenteditable')) {
+        htmlContent = htmlContent.replace(/<body([^>]*)>/i, '<body$1 contenteditable="true">');
+    }
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `Writing_Exam_${new Date().toISOString().slice(0, 10)}.html`;
@@ -784,7 +790,13 @@ function renderLearningResult(htmlContent) {
 
 function downloadLearningHTML() {
     if (!window.lastGeneratedHTML) return;
-    const blob = new Blob([window.lastGeneratedHTML], { type: 'text/html' });
+
+    let htmlContent = window.lastGeneratedHTML;
+    if (!htmlContent.includes('contenteditable')) {
+        htmlContent = htmlContent.replace(/<body([^>]*)>/i, '<body$1 contenteditable="true">');
+    }
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `Learning_Sheet_${new Date().toISOString().slice(0, 10)}.html`;
