@@ -329,112 +329,63 @@ async function runAI_Writing() {
     const typeInstructions = [];
 
     targetTypes.forEach(qType => {
-        if (qType.includes("단순 배열")) {
+        if (qType.includes("단순 배열") || qType.includes("변형 배열") || qType.includes("조건 영작")) {
             typeInstructions.push(`
-            ### Type: 1. 단어 배열 및 조건 영작 (Word Arrangement & Conditional Writing) - 단순 배열
-            - **Target Selection:** 특수 구문(도치, 강조, 가정법, the 비교급 등)이나 명사절(간접의문문 등)이 포함된 핵심 문장을 타깃으로 설정하세요.
-            - **CRITICAL:** You must MODIFY the **Source Text**.
-              1. Select a key sentence.
-              2. **MARKER RULE:** Delete the English words and replace them with a continuous blank underline (\`_\`) that is EXACTLY as long as the original sentence. Put \`(가)\` in the middle (e.g., \`__________________ (가) __________________.\`). **Keep the original period(.) at the end. DO NOT show any original English words.**
-            - **Difficulty Strategy:** 실제 고난도 내신 문제처럼 문맥에 맞지 않는 '함정 단어(Dummy Word)'를 1~2개 섞어서 제공하여 난이도를 높이세요.
-            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, 괄호 안의 단어를 모두 사용하여 배열하시오. (필요시 단어를 추가/배제하시오)"
-            - Content:
-              - [우리말 해석]: <Korean translation of the sentence>
-              - [단어]: ( <scrambled words including dummy words> )
-            `);
-        } else if (qType.includes("변형 배열")) {
-            typeInstructions.push(`
-            ### Type: 1. 단어 배열 및 조건 영작 - 변형 배열 (어형 변화)
-            - **Target Selection:** 특수 구문(도치, 강조, 가정법 등)이 포함된 핵심 문장.
-            - **CRITICAL:** You must MODIFY the **Source Text**.
-              1. Select a key sentence.
-              2. **MARKER RULE:** Delete the English words and replace them with a continuous blank underline (\`_\`) that is EXACTLY as long as the original sentence. Put \`(가)\` in the middle (e.g., \`__________________ (가) __________________.\`). **Keep the original period(.) at the end. DO NOT show any original English words.**
-            - **Difficulty Strategy:** 단순 배열을 넘어 어형 변화(시제, 수, 태 변형) 조건을 반드시 부여하세요. 함정 단어를 1개 포함하세요.
-            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, 괄호 안의 단어를 알맞게 변형하여 배열하시오."
-            - Content:
-              - [우리말 해석]: <Korean translation of the sentence>
-              - [단어]: ( <scrambled words, mostly in root form> )
-            `);
-        } else if (qType.includes("조건 영작")) {
-            typeInstructions.push(`
-            ### Type: 1. 단어 배열 및 조건 영작 - 조건 영작
-            - **Target Selection:** 핵심 주제를 담은 문장이나 특수 구문.
-            - **CRITICAL:** You must MODIFY the **Source Text**.
-              1. Select a key sentence.
-              2. **MARKER RULE:** Delete the English words and replace them with a continuous blank underline (\`_\`) that is EXACTLY as long as the original sentence. Put \`(가)\` in the middle (e.g., \`__________________ (가) __________________.\`). **Keep the original period(.) at the end. DO NOT show any original English words.**
-            - **Difficulty Strategy:** 어형 변화 및 단어 추가 조건을 명시하세요.
-            - **Question Header:** "다음 글의 밑줄 친 (가)와 같은 의미가 되도록, <보기>의 조건에 맞게 영작하시오."
-            - **Condition Box:** Use \`<ul><li>...</li></ul>\` (e.g., Use 'not only', change form).
-            - Content:
-              - [우리말 해석]: <Korean translation of the sentence>
+            ### Type: 1. 단어 배열 및 조건 영작 (Word Arrangement & Conditional Writing) - ${qType}
+            - **Target Selection:** 지문 내에서 특수 구문(도치, 강조, 가정법, the 비교급 등)이나 명사절(간접의문문 등)이 포함된 핵심 문장을 타깃으로 설정.
+            - **Difficulty Strategy:** 제시어는 동사 원형 등 기본 형태로만 제공하고, 문맥에 맞게 시제(과거완료 등)나 태(수동태)를 학생이 직접 변형하도록 유도하는 조건을 반드시 추가할 것.
+            - **예제:**
+              [지시문] 위 글의 밑줄 친 우리말과 같도록 <조건>의 말을 활용하여 영작하시오. (필요시 단어를 추가/변형하시오.)
+              [우리말] 그것은 과거에는 개인들이 어떻게 그들 자신과 그들의 사회를 바라보았는지에 대한 더 명확한 이해를 제공할 수 있다.
+              [제시어] a clearer understanding of / view / can / individuals / it / themselves and their societies / provide
+              [정답] It can provide a clearer understanding of how individuals viewed themselves and their societies in the past.
+            - **CRITICAL:** You must MODIFY the **Source Text**. Replace the target sentence with a blank underline \`__________________ (가) __________________.\` Keeping the original period(.). DO NOT show any original English words.
             `);
         } else if (qType.includes("요약문 빈칸")) {
             typeInstructions.push(`
             ### Type: 3. 요약문 완성 및 주제/제목 쓰기 (Summary & Theme Completion)
             - **Task:** Create a summary paragraph.
-            - **Difficulty Strategy:** 원문의 핵심 키워드를 그대로 쓰지 말고, 유의어(Synonym)로 대체하거나 품사를 변형(예: important → importance)하여 작성하도록 유도하세요. 학생의 어휘력을 평가하기 위해 '주어진 철자로 시작하는 단어'를 조건으로 제시하세요.
+            - **Difficulty Strategy:** 원문의 핵심 키워드를 그대로 정답으로 쓰게 하지 말고, 유의어(Synonym)로 대체하거나 품사를 변형(예: important → importance)하여 작성하도록 출제하여 독해력과 어휘력을 동시 평가할 것.
+            - **Condition:** 학생에게 힌트이자 제약이 되도록 '주어진 철자로 시작할 것'이라는 조건을 줄 것.
+            - **예제:**
+              [지시문] 아래는 이 글의 요약문이다. 주어진 철자로 시작하되 본문의 단어를 어법에 맞게 품사 변형하여 빈칸을 채우시오. (각 빈칸 1단어)
+              [요약문] In order not to be (1) t____ by (2) i____ pleasure, children use various kinds of methods and get their behavior (3) r____ by themselves.
+              [정답] (1) tempted (2) immediate (3) regulated (원문의 temptation, immediately, regulate 변형)
             - **MARKER RULE:** NO markers in text for this type.
-            - **Question Header:** "다음 글의 내용을 한 문장으로 요약하고자 한다. 주어진 철자로 시작하는 알맞은 단어를 쓰시오."
-            - **Output:** Summary text with blanks \`(A) t__________\`, \`(B) r__________\`.
             `);
         } else if (qType.includes("문장 전환")) {
             typeInstructions.push(`
             ### Type: 5. 문장 구조 전환 (Sentence Transformation)
-            - **Target Selection:** 능동태↔수동태 전환, 부사절↔분사구문 전환, 직설법↔가정법 전환, It is ~ that 강조 구문으로의 전환을 타깃으로 삼으세요.
-            - **Difficulty Strategy:** 시제 일치나 주어 일치(독립분사구문 등)에서 함정을 만들어 변별력을 시도하세요.
-            - **CRITICAL:** MODIFY Source Text with \`(a)\` or \`(b)\` + \`<u>...</u>\`. 단, 문장 구조를 전환할 때 원문의 사실 관계(Fact)와 핵심 주제를 절대 왜곡하거나 누락하지 마세요.
-            - **Question Header:** "다음 글의 밑줄 친 (a)를 분사구문(혹은 수동태/강조구문 등)을 활용하여 바꿔 쓰시오."
-            - **Output:** Provide target sentence structure with blanks or lines.
+            - **Target Selection:** 능동태↔수동태 전환, 부사절↔분사구문 전환, 직설법↔가정법 전환, It is ~ that 강조 구문으로의 전환을 최우선으로 출제할 것.
+            - **Difficulty Strategy:** 문장 전환 시 시제 일치나 주어가 다를 때의 처리(독립분사구문 등)에서 함정을 만들어 변별력을 확보할 것.
+            - **예제:**
+              [지시문] 다음 글의 밑줄 친 부분을 분사구문을 활용하여 바꿔 쓰시오.
+              [원문 / 밑줄] <u>As they have new and improved scientific knowledge</u>, scientists are able to...
+              [정답] Having new and improved scientific knowledge
+            - **CRITICAL:** MODIFY Source Text with \`(a)\` or \`(b)\` + \`<u>...</u>\`. 문장 구조를 전환할 때 원문의 사실 관계(Fact)와 핵심 주제를 철저히 유지하세요.
             `);
-        } else if (qType.includes("밑줄 고쳐 쓰기")) {
+        } else if (qType.includes("밑줄 고쳐 쓰기") || qType.includes("양자택일형") || qType.includes("밑줄 없이 찾기") || qType.includes("오류 이유 서술형")) {
             typeInstructions.push(`
-            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 밑줄 고쳐 쓰기
-            - **Difficulty Strategy:** 주어와 동사 사이에 긴 수식어구를 배치하여 '수 일치' 함정을 만들거나, 반의어(Antonym)를 배치하여 문맥상 오류를 유도하세요.
-            - **CRITICAL:** MODIFY Source Text.
-              - Select 5 parts labeled \`(A)~(E)\` with \`<u>...</u>\`.
-              - One error among them.
-            - **Question Header:** "다음 글의 밑줄 친 (A)~(E) 중 어법상 틀린 것을 찾아 바르게 고쳐 쓰시오."
+            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - ${qType}
+            - **Difficulty Strategy:** 주어와 동사 사이에 긴 수식어구(전명구, 관계사절 등)를 배치하여 '수 일치' 함정을 만들거나, 능동태/수동태 전환, 형용사/부사 쓰임, 관계대명사/관계부사 구별에 오류를 발생시킬 것.
+            - **Answer Requirement:** 단순히 틀린 단어를 고치는 것에 그치지 않고, 어법상 틀린 이유를 우리말로 구체적으로 설명하도록 요구할 것.
+            - **예제:**
+              [지시문] 다음 문장에서 틀린 부분을 찾아 바르게 고치고, 그 이유를 쓰시오.
+              [오류 부분] Writing down whatever is bothering you help you better understand how you feel.
+              [정답] help → helps
+              [이유] 문장의 주어가 동명사구 및 명사절(Writing down whatever is bothering you)로 이루어져 있으며, 구나 절이 주어일 때는 단수 취급하므로 단수 동사인 helps를 써야 한다.
+            - **CRITICAL:** MODIFY Source Text safely based on the type (e.g. 5 underlines with 1 error, or 3 brackets, or hidden errors). Ensure space for \`이유(Reason):\` is provided.
             `);
-        } else if (qType.includes("양자택일형")) {
+        } else if (qType.includes("우리말 해석") || qType.includes("함축 의미 추론")) {
             typeInstructions.push(`
-            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 양자택일형
-            - **Difficulty Strategy:** 수 일치, 능수동, 혹은 반의어가 포함된 괄호를 3개 만드세요.
-            - **CRITICAL:** MODIFY Source Text.
-              - Create 3 parts like \`(A) [is / are]\`.
-            - **Question Header:** "다음 글의 괄호 (A), (B), (C) 안에서 어법/문맥에 맞는 표현을 고르시오."
-            `);
-        } else if (qType.includes("밑줄 없이 찾기")) {
-            typeInstructions.push(`
-            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 밑줄 없이 찾기
-            - **Difficulty Strategy:** 고난도 어법 문항. 틀린 개수를 랜덤하게 명시하거나 명시하지 않도록 변형(예: "모두 찾아", "2군데 찾아" 등).
-            - **CRITICAL:** MODIFY Source Text to have 2~3 errors, NO underlines.
-            - **Question Header:** "다음 글에서 어법 혹은 문맥상 틀린 곳을 모두(혹은 N군데) 찾아 바르게 고치시오."
-            `);
-        } else if (qType.includes("오류 이유 서술형")) {
-            typeInstructions.push(`
-            ### Type: 2. 어법 및 어휘 오류 수정 (Grammar & Vocabulary Correction) - 오류 이유 서술형
-            - **Difficulty Strategy:** 어법 오류를 교정하고 그 문법적 이유까지 서술하게 하는 고난도 문항입니다.
-            - **CRITICAL:** MODIFY Source Text with \`(A)~(E)\` + \`<u>...</u>\`. One error.
-            - **Question Header:** "다음 문장에서 틀린 부분을 찾아 바르게 고치고, 그 이유를 설명하시오."
-            - **Answer Space:** Add \`이유(Reason): ____________________\`.
-            `);
-        } else if (qType.includes("우리말 해석")) {
-            typeInstructions.push(`
-            ### Type: 4. 세부 내용 파악 및 지칭 추론 (Detail & Reference Inference) - 우리말 해석
-            - **Target Selection:** 지문 내의 대명사(it, they, this 등)나 추상적인 명사구(예: this factor)를 타깃으로 설정.
-            - **Difficulty Strategy:** 단어 자체의 번역을 넘어 문맥적/함축적 의미를 지정된 길이(예: "30자 이내", "10-15 단어" 등)로 우리말로 서술하게 하세요.
-            - **CRITICAL:** MODIFY Source Text.
-              - Label target with \`㉠\` or \`㉡\` + \`<u>...</u>\`.
-            - **Question Header:** "다음 글의 밑줄 친 ㉠이 가리키는 내용을 본문에서 찾아 <조건>에 맞게 우리말로 서술하시오."
-            `);
-        } else if (qType.includes("함축 의미 추론")) {
-            typeInstructions.push(`
-            ### Type: 4. 세부 내용 파악 및 지칭 추론 (Detail & Reference Inference) - 함축 의미 추론
-            - **Target Selection:** 비유적 표현이나 복잡한 구를 타깃으로 설정.
-            - **Difficulty Strategy:** 단순히 대명사가 지칭하는 단어를 찾는 것을 넘어, 글의 문맥적 의미를 조건(12~16단어의 완벽한 영어 문장 등)에 맞게 서술하도록 요구하여 독해력을 측정하세요.
-            - **CRITICAL:** MODIFY Source Text.
-              - Label target with \`㉠\` or \`㉡\` + \`<u>...</u>\`.
-            - **Question Header:** "밑줄 친 ㉡의 문맥상 의미를 본문에서 찾아 조건에 맞게 영어로 서술하시오."
+            ### Type: 4. 세부 내용 파악 및 지칭 추론 (Detail & Reference Inference) - ${qType}
+            - **Target Selection:** 지문 내의 추상적 지칭어(예: this factor, this unconscious function 등) 혹은 비유적 표현을 타깃으로 삼을 것.
+            - **Difficulty Strategy:** 지문에서 그대로 찾아 영어 문장으로 쓰게 하거나, 난이도를 높이기 위해 글의 문맥적/함축적 의미를 우리말로 풀어서 서술(예: 30자 이내)하도록 요구할 것.
+            - **예제:**
+              [지시문] 다음 글의 밑줄 친 'this factor'가 가리키는 내용을 본문에서 찾아 조건에 맞게 쓰시오. (조건: 12~16단어의 완벽한 영어 문장으로 쓰시오.)
+              [본문 일부] We are extremely responsive to what we perceive people around us to be doing. (...) A study has shown how powerful <u>this factor</u> is.
+              [정답] We are extremely responsive to what we perceive people around us to be doing.
+            - **CRITICAL:** MODIFY Source Text. Label target with \`㉠\` or \`㉡\` + \`<u>...</u>\`.
             `);
         }
     });
