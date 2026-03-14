@@ -459,16 +459,16 @@ async function runAI_Writing() {
     4. **Header HTML (Student Info):**
        <table class="header-table">
            <tr style="height: 40px;">
-               <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Date</td>
-               <td style="width: 35%; border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+               <td style="width: 10%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Date</td>
+               <td style="width: 25%; border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
                <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Score</td>
-               <td style="width: 35%; border-bottom: 1px solid #000;"> &nbsp; / 100</td>
+               <td style="width: 50%; border-bottom: 1px solid #000;"> &nbsp; / 100</td>
            </tr>
            <tr style="height: 40px;">
-               <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Class</td>
-               <td style="width: 35%; border-right: 1px solid #000;"></td>
+               <td style="width: 10%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Class</td>
+               <td style="width: 25%; border-right: 1px solid #000;"></td>
                <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Name</td>
-               <td style="width: 35%;"></td>
+               <td style="width: 50%;"></td>
            </tr>
        </table>
 
@@ -610,10 +610,13 @@ async function runAI_Learning() {
     1. 주제 영작 (Topic English writing) - Ask to write the topic of the text in English.
     2. 제목 영작 (Title English writing) - Ask to write the title of the text in English.
     3. 요지쓰기 (Main idea writing) - Ask to write the main idea of the text in Korean (한글로 작성).
-    4. 질문-응답 (Question-answer) - Provide an English question about the passage and leave space for an English answer.
-    5. 요약문 영작 (Summary English writing) - Provide a summary sentence with 3~4 blank words based on initial letters (e.g. T____).
-    6. 함축 의미 (Implied Meaning) - Ask for the implied meaning of a specific phrase/sentence from the text.
-    7. 지칭 추론 (Reference Inference) - Ask what a specific pronoun or phrase refers to in the text.
+    4. 구조화 빈칸 영작 (Structured Cloze Writing) - Provide a key sentence from the text with some parts left blank (especially key patterns like 'not only A but B') to help students practice partial English writing.
+    5. 질문-응답 (Question-answer) - Provide an English question about the passage and leave space for an English answer.
+    6. 요약문 영작 (Summary English writing) - Provide a summary sentence with 3~4 blank words based on initial letters (e.g. T____) and word form transformation.
+    7. 고난도 조건 영작 (Conditioned Writing) - Select a key sentence and provide root-form words. Ask the student to arrange and modify verbs (voice, tense) adding new words if necessary.
+    8. 함축 의미 (Implied Meaning) - Ask for the implied meaning of a specific phrase/sentence from the text.
+    9. 지칭 추론 (Reference Inference) - Ask what a specific pronoun or phrase refers to in the text.
+    10. 파생 어휘 리스트 (Vocabulary List) - Provide a table of synonyms and antonyms for 3~5 key vocabulary words from the text.
     
     Source Text:
     ${combinedSourceText}
@@ -651,22 +654,22 @@ async function runAI_Learning() {
        - For EACH passage, create a \`<div class="passage-section">\`:
          - Inside \`.passage-section\`, add \`<div class="left-column">\` and \`<div class="right-column">\`.
          - **Left Column:** Put the passage text inside \`<div class="passage-text"><b>[Passage Title]</b><br><br>[Original Passage]</div>\`.
-         - **Right Column:** Add the 7 tasks consecutively. Each task needs enough \`<div class="answer-line"></div>\` for the student to write their answer. Keep the questions inside \`.task-item\` blocks.
-       - **Answer Key:** Place the expected/model Answer Key at the very end of the document, OUTSIDE the \`.content-wrapper\`, wrapped in \`<div class="answer-key-section">\`. Give a clear model answer for the 7 tasks for each passage.
+         - **Right Column:** Add the 10 tasks consecutively. Each task needs enough \`<div class="answer-line"></div>\` for the student to write their answer. Keep the questions inside \`.task-item\` blocks.
+       - **Answer Key:** Place the expected/model Answer Key at the very end of the document, OUTSIDE the \`.content-wrapper\`, wrapped in \`<div class="answer-key-section">\`. Give a clear model answer for the 10 tasks for each passage.
 
     4. **Header HTML (Student Info):**
        <table class="header-table">
            <tr style="height: 40px;">
-               <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Date</td>
-               <td style="width: 35%; border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+               <td style="width: 10%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Date</td>
+               <td style="width: 25%; border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
                <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Score</td>
-               <td style="width: 35%; border-bottom: 1px solid #000;"> &nbsp; / 100</td>
+               <td style="width: 50%; border-bottom: 1px solid #000;"> &nbsp; / 100</td>
            </tr>
            <tr style="height: 40px;">
-               <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Class</td>
-               <td style="width: 35%; border-right: 1px solid #000;"></td>
+               <td style="width: 10%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Class</td>
+               <td style="width: 25%; border-right: 1px solid #000;"></td>
                <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Name</td>
-               <td style="width: 35%;"></td>
+               <td style="width: 50%;"></td>
            </tr>
        </table>
 
