@@ -1,6 +1,38 @@
 let globalGeneratedData = []; // Global storage for download
 let inputCount = 0;
 
+// --- Tab Logic ---
+function switchTab(mode, element) {
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+
+    if (mode === 'exam') {
+        document.getElementById('sidebar-exam-content').style.display = 'block';
+        document.getElementById('sidebar-learning-content').style.display = 'none';
+        
+        const emptyMsg = document.getElementById('empty-results-msg');
+        if (emptyMsg) {
+            emptyMsg.innerHTML = `
+                <i class="fas fa-check-square" style="font-size:24px; margin-bottom:15px; opacity:0.5;"></i><br>
+                왼쪽 사이드바에서 <b>원하는 유형을 체크</b>하고<br>
+                <b>[서술형 시험지 생성]</b> 버튼을 눌러주세요.
+            `;
+        }
+    } else {
+        document.getElementById('sidebar-exam-content').style.display = 'none';
+        document.getElementById('sidebar-learning-content').style.display = 'block';
+
+        const emptyMsg = document.getElementById('empty-results-msg');
+        if (emptyMsg) {
+            emptyMsg.innerHTML = `
+                <i class="fas fa-book" style="font-size:24px; margin-bottom:15px; opacity:0.5;"></i><br>
+                왼쪽 사이드바에서 <b>[확인학습지 생성]</b> 버튼을 눌러주세요.<br>
+                (주제, 제목, 요지, Q&A, 요약문 영작 훈련)
+            `;
+        }
+    }
+}
+
 function addInputBox() { createInputCard(""); }
 function removeInputBox(id) { document.getElementById(id)?.remove(); updateTextCount(); }
 
@@ -564,5 +596,197 @@ function downloadWritingHTML() {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `Writing_Exam_${new Date().toISOString().slice(0, 10)}.html`;
+    link.click();
+}
+
+// --- Learning Mode Generator Logic ---
+async function runAI_Learning() {
+    // 0. Input Validation
+    const textareas = document.querySelectorAll('.source-textarea');
+    const titleInputs = document.querySelectorAll('.passage-title-input');
+
+    let combinedSourceText = "";
+    let validCount = 0;
+
+    textareas.forEach((area, idx) => {
+        const text = area.value.trim();
+        const title = titleInputs[idx].value.trim() || `Passage ${idx + 1}`;
+        if (text) {
+            combinedSourceText += `\n[${title}]\n${text}\n\n`;
+            validCount++;
+        }
+    });
+
+    if (validCount === 0) {
+        alert("지문을 먼저 입력해주세요.");
+        return;
+    }
+
+    let apiKey = localStorage.getItem("gemini_api_key");
+    if (!apiKey) {
+        alert("API 키가 필요합니다. 설정 메뉴에서 등록해주세요.");
+        return;
+    }
+
+    // 1. Get Settings
+    const examTitle = document.getElementById('learning-title-input').value || "서술형 대비 확인학습";
+    const examSubtitle = document.getElementById('learning-subtitle-input').value || "주제/요지/요약문 영작 훈련";
+
+    // 2. Prepare UI
+    const loading = document.getElementById('loading');
+    const statusText = document.getElementById('statusText');
+    const resultsContainer = document.getElementById('results-container');
+    const emptyMsg = document.getElementById('empty-results-msg');
+
+    resultsContainer.innerHTML = "";
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    if (loading) loading.style.display = 'block';
+    statusText.innerText = `확인학습지 생성 중... (모델: ${activeModel})`;
+
+    // 3. Construct Prompt
+    const prompt = `
+    # Role & Objective
+    You are an expert English teacher. Create a "Korean High School English Descriptive Preparation Learning Sheet" (서술형 확인학습지).
+    
+    Target Tasks (For EVERY passage provided):
+    For EACH passage independently, generate:
+    1. 주제 영작 (Topic English writing) - Ask to write the topic of the text in English.
+    2. 제목 영작 (Title English writing) - Ask to write the title of the text in English.
+    3. 요지쓰기 (Main idea writing) - Ask to write the main idea of the text in Korean (한글로 작성).
+    4. 질문-응답 (Question-answer) - Provide an English question about the passage and leave space for an English answer.
+    5. 요약문 영작 (Summary English writing) - Provide a summary sentence with 3~4 blank words based on initial letters (e.g. T____).
+    6. 함축 의미 (Implied Meaning) - Ask for the implied meaning of a specific phrase/sentence from the text.
+    7. 지칭 추론 (Reference Inference) - Ask what a specific pronoun or phrase refers to in the text.
+    
+    Source Text:
+    ${combinedSourceText}
+
+    [DESIGN & LAYOUT SPECIFICATIONS - CRITICAL]
+    You must generate a COMPLETE HTML document starting with \`<!DOCTYPE html>\`.
+    
+    1. **Page Layout (B4 Size, 1 Page per Passage, 2-Column):**
+       - Use the following CSS in \`<style>\`:
+         @page { size: B4 portrait; margin: 20mm; }
+         body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; line-height: 1.6; padding: 20px; background-color: #ffffff !important; color: #000000 !important; }
+         .page-container { width: 100%; box-sizing: border-box; background-color: #ffffff !important; }
+         .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 2px solid #000; background-color: #ffffff; }
+         .answer-line { display: block; width: 100%; border-bottom: 1px dashed #777; margin-top: 20px; margin-bottom: 20px; height: 30px; }
+         .footer { text-align: center; font-size: 10px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
+         .answer-key-section { page-break-before: always; display: block; margin-top: 50px; border-top: 2px dashed #000; padding-top: 20px; background-color: #ffffff; }
+         .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; font-weight: bold; color: rgba(0, 0, 0, 0.08); white-space: nowrap; z-index: 0; pointer-events: none; user-select: none; font-family: 'Helvetica', sans-serif; }
+         .content-wrapper { position: relative; z-index: 10; text-align: justify; }
+         .passage-section { page-break-after: always; margin-bottom: 0; background-color: #ffffff; padding: 10px; display: flex; gap: 20mm; min-height: 800px; }
+         .left-column { flex: 1; border-right: 1px solid #ccc; padding-right: 20mm; }
+         .right-column { flex: 1; }
+         .passage-text { margin-bottom: 25px; font-family: 'Times New Roman', serif; font-size: 1.1em; line-height: 1.8; }
+         .task-item { margin-bottom: 25px; }
+         .task-title { font-weight: bold; font-size: 1.05em; margin-bottom: 8px; display:flex; align-items:flex-start; }
+         .task-title::before { content: "▶"; color: #3b82f6; margin-right: 6px; font-size: 0.9em; margin-top: 2px; }
+
+    2. **Editable Capability:**
+       - **CRITICAL:** Add \`contenteditable="true"\` to the \`<body>\` tag.
+
+    3. **Structure & Instruction:**
+       - **Watermark:** Immediately inside \`<body>\`, add \`<div class="watermark">Top English Academy</div>\`.
+       - **Header:** Insert the Title and Student Info Table at the very top. Use "${examTitle}" and "${examSubtitle}".
+       - **Main Instruction:** Immediately after the header, add: \`<h3><b>※ 다음 글을 읽고 각 빈칸이나 질문에 알맞게 논술/영작하시오.</b></h3>\`
+       - **Body:** Wrap all the content inside \`<div class="content-wrapper">\`.
+       - For EACH passage, create a \`<div class="passage-section">\`:
+         - Inside \`.passage-section\`, add \`<div class="left-column">\` and \`<div class="right-column">\`.
+         - **Left Column:** Put the passage text inside \`<div class="passage-text"><b>[Passage Title]</b><br><br>[Original Passage]</div>\`.
+         - **Right Column:** Add the 7 tasks consecutively. Each task needs enough \`<div class="answer-line"></div>\` for the student to write their answer. Keep the questions inside \`.task-item\` blocks.
+       - **Answer Key:** Place the expected/model Answer Key at the very end of the document, OUTSIDE the \`.content-wrapper\`, wrapped in \`<div class="answer-key-section">\`. Give a clear model answer for the 7 tasks for each passage.
+
+    4. **Header HTML (Student Info):**
+       <table class="header-table">
+           <tr style="height: 40px;">
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Date</td>
+               <td style="width: 35%; border-right: 1px solid #000; border-bottom: 1px solid #000;"></td>
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Score</td>
+               <td style="width: 35%; border-bottom: 1px solid #000;"> &nbsp; / 100</td>
+           </tr>
+           <tr style="height: 40px;">
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Class</td>
+               <td style="width: 35%; border-right: 1px solid #000;"></td>
+               <td style="width: 15%; text-align: center; border-right: 1px solid #000; font-weight: bold; background-color: #f0f0f0;">Name</td>
+               <td style="width: 35%;"></td>
+           </tr>
+       </table>
+
+    [OUTPUT FORMAT]
+    Output ONLY the RAW HTML Code (Full design with B4 size, 2 columns, Editable body, and separated Answer Key). 
+    Do not output markdown code blocks. Just start with \`<!DOCTYPE html>\`.
+    `;
+
+    // 4. API Call
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            })
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+        const data = await response.json();
+
+        if (!data.candidates || !data.candidates[0].content) {
+            throw new Error("결과 생성 실패 (Safety Block 등)");
+        }
+
+        let rawHtml = data.candidates[0].content.parts[0].text;
+
+        // Cleanup HTML string
+        rawHtml = rawHtml.replace(/```html|```/g, "").trim();
+
+        // Render Result
+        renderLearningResult(rawHtml);
+
+    } catch (e) {
+        alert("오류 발생: " + e.message);
+        console.error(e);
+    } finally {
+        if (loading) loading.style.display = 'none';
+        statusText.innerText = "문제 생성 완료";
+    }
+}
+
+function renderLearningResult(htmlContent) {
+    const container = document.getElementById('results-container');
+    container.innerHTML = `
+        <div style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-size:18px; color:#1e293b;"><i class="fas fa-check-circle" style="color:#10b981;"></i> 서술형 학습지 생성 완료</h3>
+                <button onclick="downloadLearningHTML()" style="background:#2563eb; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer;">
+                    <i class="fas fa-download"></i> 다운로드 (.html)
+                </button>
+            </div>
+            <div style="width:100%; height:800px; border:1px solid #ddd; border-radius:8px; overflow:hidden;">
+                <iframe id="preview-frame" style="width:100%; height:100%; border:none; background:#fff;"></iframe>
+            </div>
+        </div>
+    `;
+
+    // Store global for download
+    window.lastGeneratedHTML = htmlContent;
+
+    // Inject into iframe
+    const iframe = document.getElementById('preview-frame');
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+}
+
+function downloadLearningHTML() {
+    if (!window.lastGeneratedHTML) return;
+    const blob = new Blob([window.lastGeneratedHTML], { type: 'text/html' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Learning_Sheet_${new Date().toISOString().slice(0, 10)}.html`;
     link.click();
 }

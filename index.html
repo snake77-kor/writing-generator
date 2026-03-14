@@ -20,6 +20,10 @@
         <div class="logo"><i class="fas fa-graduation-cap"></i> Top English Academy <span class="badge">내신 서술형 전용
                 앱</span>
         </div>
+        <div class="main-nav" style="margin-left: 50px;">
+            <div class="nav-item active" onclick="switchTab('exam', this)"><i class="fas fa-file-alt" style="margin-right:8px;"></i> 서술형 실전 출제</div>
+            <div class="nav-item" onclick="switchTab('learning', this)"><i class="fas fa-book-open" style="margin-right:8px;"></i> 서술형 확인학습</div>
+        </div>
         <div style="flex:1;"></div>
     </header>
 
@@ -29,8 +33,8 @@
             style="width:260px; border-right:1px solid #eee; padding:20px; background:#fff; flex-shrink:0; display:flex; flex-direction:column;">
 
             <div style="flex:1; overflow-y:auto;">
-                <!-- WRITING MODE SIDEBAR CONTENT -->
-                <div id="sidebar-writing-content" style="display: block;">
+                <!-- EXAM MODE SIDEBAR CONTENT -->
+                <div id="sidebar-exam-content" style="display: block;">
                     <div class="sidebar-group" style="margin-bottom:25px;">
                         <button class="generate-all-btn" onclick="runAI_Writing()"
                             style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
@@ -106,6 +110,33 @@
                                 해석</label></div>
                         <div class="sidebar-checkbox-item"><input type="checkbox" value="함축 의미 추론"
                                 name="wtype"><label>함축 의미 추론</label></div>
+                    </div>
+                </div>
+
+                <!-- LEARNING MODE SIDEBAR CONTENT -->
+                <div id="sidebar-learning-content" style="display: none;">
+                    <div class="sidebar-group" style="margin-bottom:25px;">
+                        <button class="generate-all-btn" onclick="runAI_Learning()"
+                            style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); width: 100%; border: none; padding: 12px; color: white; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                            <i class="fas fa-book"></i> 확인학습지 생성
+                        </button>
+                    </div>
+
+                    <div class="sidebar-group" style="margin-bottom:25px;">
+                        <div class="group-title">학습지 정보</div>
+                        <input type="text" id="learning-title-input" placeholder="학습지 제목" value="서술형 대비 확인학습" style="width:100%; padding:6px; font-size:12px; border:1px solid #eee; margin-bottom:5px;">
+                        <input type="text" id="learning-subtitle-input" placeholder="부제" value="주제/요지/요약문 영작 훈련" style="width:100%; padding:6px; font-size:12px; border:1px solid #eee;">
+                    </div>
+
+                    <div class="sidebar-group" style="margin-bottom:15px;">
+                        <div class="group-title">학습 항목 (고정)</div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" checked disabled><label>주제 영작 (Topic)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" checked disabled><label>제목 영작 (Title)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" checked disabled><label>요지 쓰기 (Main Idea)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" checked disabled><label>질문-응답 (Q&A)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" checked disabled><label>요약문 영작 (Summary)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" checked disabled><label>함축 의미 추론 (Implied Meaning)</label></div>
+                        <div class="sidebar-checkbox-item"><input type="checkbox" checked disabled><label>지칭 추론 (Reference Inference)</label></div>
                     </div>
                 </div>
             </div>
