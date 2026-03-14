@@ -423,7 +423,7 @@ async function runAI_Writing() {
     
     1. **Page Layout (B4 Size & 2-Column):**
        - Use the following CSS in \`<style>\`:
-         @page { size: B4 portrait; margin: 20mm; }
+         @page { size: B4 portrait; margin: 10mm; }
          body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; line-height: 1.6; padding: 20px; background-color: #ffffff !important; color: #000000 !important; }
          .page-container { width: 100%; box-sizing: border-box; background-color: #ffffff !important; }
          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 2px solid #000; background-color: #ffffff; }
@@ -431,7 +431,7 @@ async function runAI_Writing() {
          .footer { text-align: center; font-size: 10px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
          .answer-key-section { page-break-before: always; display: block; margin-top: 50px; border-top: 2px dashed #000; padding-top: 20px; background-color: #ffffff; }
          .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; font-weight: bold; color: rgba(0, 0, 0, 0.08); white-space: nowrap; z-index: 0; pointer-events: none; user-select: none; font-family: 'Helvetica', sans-serif; }
-         .content-wrapper { position: relative; z-index: 10; column-count: 2; column-gap: 15mm; column-rule: 0.5px solid #ccc; text-align: justify; }
+         .content-wrapper { position: relative; z-index: 10; column-count: 2; column-gap: 5mm; column-rule: 0.5px solid #ccc; text-align: justify; }
          .question-box { break-inside: avoid; margin-bottom: 60px; background-color: #ffffff; }
          .scoring-rubric { font-size: 0.85em; color: #d97706; background-color: #fffbeb; border-left: 3px solid #f59e0b; padding: 10px; margin-top: 15px; }
          ul { list-style-type: none; padding-left: 0; }
@@ -626,7 +626,7 @@ async function runAI_Learning() {
     
     1. **Page Layout (B4 Size, 1 Page per Passage, 2-Column):**
        - Use the following CSS in \`<style>\`:
-         @page { size: B4 portrait; margin: 20mm; }
+         @page { size: B4 portrait; margin: 10mm; }
          body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; line-height: 1.6; padding: 20px; background-color: #ffffff !important; color: #000000 !important; }
          .page-container { width: 100%; box-sizing: border-box; background-color: #ffffff !important; }
          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 2px solid #000; background-color: #ffffff; }
@@ -635,8 +635,8 @@ async function runAI_Learning() {
          .answer-key-section { page-break-before: always; display: block; margin-top: 50px; border-top: 2px dashed #000; padding-top: 20px; background-color: #ffffff; }
          .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; font-weight: bold; color: rgba(0, 0, 0, 0.08); white-space: nowrap; z-index: 0; pointer-events: none; user-select: none; font-family: 'Helvetica', sans-serif; }
          .content-wrapper { position: relative; z-index: 10; text-align: justify; }
-         .passage-section { page-break-after: always; margin-bottom: 0; background-color: #ffffff; padding: 10px; display: flex; gap: 20mm; min-height: 800px; }
-         .left-column { flex: 1; border-right: 1px solid #ccc; padding-right: 20mm; }
+         .passage-section { page-break-after: always; margin-bottom: 0; background-color: #ffffff; padding: 10px; display: flex; gap: 5mm; min-height: 800px; }
+         .left-column { flex: 1; border-right: 1px solid #ccc; padding-right: 5mm; }
          .right-column { flex: 1; }
          .passage-text { margin-bottom: 25px; font-family: 'Times New Roman', serif; font-size: 1.1em; line-height: 1.8; }
          .task-item { margin-bottom: 25px; }
